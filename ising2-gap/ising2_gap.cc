@@ -9,15 +9,14 @@ int main(int argc, char *argv[])
 
   //write results to file
   char schar1[50];
-  int n1 = std::sprintf(schar1,"Nx_%d_Ny_%d_Ising2d_Gap.txt",Nx,Ny);
+  int n1 = std::sprintf(schar1,"Nx_%d_Ny_%d_Ising2d_Gap.dat",Nx,Ny);
   std::string s1(schar1);
-  std::ofstream enerfile1(s1);
-  if (!enerfile1.is_open())
-    {
-        return 0;
-    }
-
-  double h = 4.0; //initialize h in the gapped phase
+  std::ofstream enerfile1;
+  enerfile1.open(s1); // opens the file
+   if( !enerfile1 ) { // file couldn't be opened
+      std::cerr << "Error: file could not be opened" << std::endl;
+      exit(1);
+   }
 
   auto N = Nx * Ny;
   auto sites = SpinHalf(N,{"ConserveQNs=",false});
@@ -25,17 +24,28 @@ int main(int argc, char *argv[])
   auto ampo = AutoMPO(sites);
   auto lattice = squareLattice(Nx, Ny, {"YPeriodic = ", true});
 
+  // create vectors of h
+  auto h = std::vector<double>(1);
+  h.at(0) = 3.0;
+  for(int i=1; i<=100; i++){
+      h.push_back(4.0 - i*0.025);
+  }
+  auto diff = std::vector<double>(1); //used to create new Hamiltonian
+  diff.at(0) = h[1] - h[0];
+  for(int i=1; i<=10; i++){
+      diff.push_back(h[i+1] - h[i]);
+  }
+  // autompo hamiltonian
   for(auto j : lattice)
       {
       ampo += -4, "Sz", j.s1, "Sz", j.s2;
       }
   for(auto j : range1(N))
       {
-      ampo += -2*h, "Sx", j;
+      ampo += -2*h[0], "Sx", j;
       }
-  auto H = toMPO(ampo); //12x12 matrices
   
-  auto state = InitState(sites);
+  auto state = InitState(sites); //initial state
   for(auto j : range1(N))
       {
       state.set(j, (j % 2 == 1 ? "Up" : "Dn"));
@@ -46,21 +56,48 @@ int main(int argc, char *argv[])
   sweeps.maxdim() = 20, 50, 100, 200, 400;
   sweeps.cutoff() = 1E-8;
 
-  std::cout << "hval" << " " << "maxBondDimGS" << " " << "maxBondDimExc" << " " << "energy" << " " << "gap" << " " << std::endl;
+  enerfile1 << "hval" << " " << "maxBondDimGS" << " " << "maxBondDimExc" << " " << "energy" << " " << "gap" << " " << std::endl;
+  
+  // loop over values of h
+  for(int i=0; i<10; i++){
+      if(i==0){
+        auto H = toMPO(ampo);
+        auto [energy,psi0] = dmrg(H,state,sweeps,{"Quiet=",true});
 
-  auto [energy,psi0] = dmrg(H,state,sweeps,{"Quiet=",true});
+        auto wfs = std::vector<MPS>(1);
+        wfs.at(0) = psi0;
 
-  auto wfs = std::vector<MPS>(1);
-  wfs.at(0) = psi0;
+        //
+        // Here the Weight option sets the energy penalty for
+        // psi1 having any overlap with psi0
+        //
+        auto [en1,psi1] = dmrg(H,wfs,randomMPS(sites),sweeps,{"Quiet=",true,"Weight=",20.0});
+        auto gap = en1-energy; //compute gap energy
 
-  //
-  // Here the Weight option sets the energy penalty for
-  // psi1 having any overlap with psi0
-  //
-  auto [en1,psi1] = dmrg(H,wfs,randomMPS(sites),sweeps,{"Quiet=",true,"Weight=",20.0});
-  auto gap = en1-energy; //compute gap energy
+        enerfile1 << h[i] << " " << maxLinkDim(psi0) << " " << maxLinkDim(psi1) << " " << energy << " " << gap << " " << std::endl;
+      }
+      else{
+        for(auto j : range1(N))
+            {
+            ampo += -2*diff[i], "Sx", j;
+            }
+        auto H = toMPO(ampo); //12x12 matrices
+        auto [energy,psi0] = dmrg(H,state,sweeps,{"Quiet=",true});
 
-  std::cout << h << " " << maxLinkDim(psi0) << " " << maxLinkDim(psi1) << " " << energy << " " << gap << " " << std::endl;
+        auto wfs = std::vector<MPS>(1);
+        wfs.at(0) = psi0;
+
+        //
+        // Here the Weight option sets the energy penalty for
+        // psi1 having any overlap with psi0
+        //
+        auto [en1,psi1] = dmrg(H,wfs,randomMPS(sites),sweeps,{"Quiet=",true,"Weight=",20.0});
+        auto gap = en1-energy; //compute gap energy
+
+        enerfile1 << h[i] << " " << maxLinkDim(psi0) << " " << maxLinkDim(psi1) << " " << energy << " " << gap << " " << std::endl;
+        }
+
+  }
   enerfile1.close();
 
   return 0;
