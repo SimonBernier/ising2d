@@ -49,7 +49,8 @@ int main(int argc, char *argv[])
   //DMRG to find ground state at t=0
   auto H = toMPO(ampo);
   auto [energy,psi] = dmrg(H,state,sweeps,{"Silent=",true});
-
+  //PrintData(H);
+  
   // create vectors of time
   auto tval = std::vector<double>(1);
   tval.at(0) = 0.0;
@@ -62,18 +63,21 @@ int main(int argc, char *argv[])
   auto expH1 = toExpH(ampo, 0.5*dt*(1+Cplx_i)); //time evolve by 0.5*(1+i)*dt
   auto expH2 = toExpH(ampo, 0.5*dt*(1-Cplx_i)); //time evolve by 0.5*(i-i)*dt
   auto args = Args("Method=","DensityMatrix","Cutoff=",1E-9,"MaxDim=",3000);
-
+  //PrintData(expH1);
+  //PrintData(expH2);
+  
   // time evolve
   for(int i=0; i<Nt; i++){
     tval.push_back(tval[i]+dt);
     psi = applyMPO(expH1,psi,args);
+    psi.noPrime().normalize(); //need to do this after each to take care of prime levels
     psi = applyMPO(expH2,psi,args);
-    psi.noPrime().normalize(); //need to do this after each?
+    psi.noPrime().normalize(); //need to do this after each to take care of prime levels
     
-    energy = inner(psi,H,psi);
+    auto energyT = innerC(psi,H,psi);
 
-    enerfile1 << tval[i+1] << " " << energy << std::endl;
-    printfln("Iteration %d, energy = %0.3g",i,energy);
+    enerfile1 << tval[i+1] << " " << energyT << std::endl;
+    printfln("Iteration %d, energy = %0.3g",i,energyT);
 
   }
   enerfile1.close();
