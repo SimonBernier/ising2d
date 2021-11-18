@@ -5,7 +5,7 @@ using namespace itensor;
 int main(int argc, char *argv[])
   {
   int Nx = 64;
-  int Ny = 3;
+  int Ny = 10;
 
   //write results to file
   char schar1[50];
@@ -27,22 +27,24 @@ int main(int argc, char *argv[])
   // create vectors of h
   auto h = std::vector<double>(1);
   h.at(0) = 3.0;
-  for(int i=1; i<=100; i++){
-      h.push_back(4.0 - i*0.025);
+  int iter = 10;
+  double h_step = 0.1;
+  for(int i=1; i<=iter; i++){
+      h.push_back(h[0] - i*h_step);
   }
   auto diff = std::vector<double>(1); //used to create new Hamiltonian
   diff.at(0) = h[1] - h[0];
-  for(int i=1; i<=10; i++){
+  for(int i=1; i<=iter; i++){
       diff.push_back(h[i+1] - h[i]);
   }
   // autompo hamiltonian
   for(auto j : lattice)
       {
-      ampo += -4, "Sz", j.s1, "Sz", j.s2;
+      ampo += -1, "Sz", j.s1, "Sz", j.s2;
       }
   for(auto j : range1(N))
       {
-      ampo += -2*h[0], "Sx", j;
+      ampo += -h[0], "Sx", j;
       }
   
   auto state = InitState(sites); //initial state
@@ -59,10 +61,10 @@ int main(int argc, char *argv[])
   enerfile1 << "hval" << " " << "maxBondDimGS" << " " << "maxBondDimExc" << " " << "energy" << " " << "gap" << " " << std::endl;
   
   // loop over values of h
-  for(int i=0; i<10; i++){
+  for(int i=0; i<iter; i++){
       if(i==0){
         auto H = toMPO(ampo);
-        auto [energy,psi0] = dmrg(H,state,sweeps,{"Quiet=",true});
+        auto [energy,psi0] = dmrg(H,state,sweeps,{"Silent=",true});
 
         auto wfs = std::vector<MPS>(1);
         wfs.at(0) = psi0;
@@ -71,10 +73,11 @@ int main(int argc, char *argv[])
         // Here the Weight option sets the energy penalty for
         // psi1 having any overlap with psi0
         //
-        auto [en1,psi1] = dmrg(H,wfs,randomMPS(sites),sweeps,{"Quiet=",true,"Weight=",20.0});
+        auto [en1,psi1] = dmrg(H,wfs,randomMPS(sites),sweeps,{"Silent=",true,"Weight=",20.0});
         auto gap = en1-energy; //compute gap energy
 
         enerfile1 << h[i] << " " << maxLinkDim(psi0) << " " << maxLinkDim(psi1) << " " << energy << " " << gap << " " << std::endl;
+        printfln("Iteration %d, h = %.3g, gap = %0.3g",i,h[i],gap);
       }
       else{
         for(auto j : range1(N))
@@ -82,7 +85,7 @@ int main(int argc, char *argv[])
             ampo += -2*diff[i], "Sx", j;
             }
         auto H = toMPO(ampo); //12x12 matrices
-        auto [energy,psi0] = dmrg(H,state,sweeps,{"Quiet=",true});
+        auto [energy,psi0] = dmrg(H,state,sweeps,{"Silent=",true});
 
         auto wfs = std::vector<MPS>(1);
         wfs.at(0) = psi0;
@@ -91,10 +94,11 @@ int main(int argc, char *argv[])
         // Here the Weight option sets the energy penalty for
         // psi1 having any overlap with psi0
         //
-        auto [en1,psi1] = dmrg(H,wfs,randomMPS(sites),sweeps,{"Quiet=",true,"Weight=",20.0});
+        auto [en1,psi1] = dmrg(H,wfs,randomMPS(sites),sweeps,{"Silent=",true,"Weight=",20.0});
         auto gap = en1-energy; //compute gap energy
 
         enerfile1 << h[i] << " " << maxLinkDim(psi0) << " " << maxLinkDim(psi1) << " " << energy << " " << gap << " " << std::endl;
+        printfln("Iteration %d, h = %.3g, gap = %0.3g",i,h[i],gap);
         }
 
   }
