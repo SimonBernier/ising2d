@@ -5,7 +5,7 @@ using namespace itensor;
 int main(int argc, char *argv[])
   {
   int Nx = 64;
-  int Ny = 10;
+  int Ny = 3;
 
   //write results to file
   char schar1[50];
@@ -26,9 +26,9 @@ int main(int argc, char *argv[])
 
   // create vectors of h
   auto h = std::vector<double>(1);
-  h.at(0) = 1.0;
+  h.at(0) = 1.0; //1D critical point
   int iter = 10;
-  double h_step = 0.05;
+  double h_step = 0.05; //increase by small steps
   for(int i=1; i<=iter; i++){
       h.push_back(h[0] + i*h_step);
   }
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
       }
 
   // 2d ising model parameters
-  auto sweeps = Sweeps(8);
+  auto sweeps = Sweeps(10);
   sweeps.maxdim() = 20, 50, 100, 200, 400;
   sweeps.cutoff() = 1E-8;
 
@@ -62,11 +62,14 @@ int main(int argc, char *argv[])
   
   // loop over values of h
   for(int i=0; i<iter; i++){
+    printfln("\nStarting Iteration %d\n",i+1);
     for(auto j : range1(N)){
-        ampo += 2*diff[i], "Sx", j;
+        ampo += -2.0*diff[i], "Sx", j;
         }
     auto H = toMPO(ampo); //12x12 matrices
-    auto [energy,psi0] = dmrg(H,state,sweeps,{"Silent=",true});
+    auto [en0,psi0] = dmrg(H,state,sweeps,{"Silent=",true});
+    println("--- found ground state ---");
+    printfln("Energy = %0.3g, maxLinkDim = %d",en0,maxLinkDim(psi0));
 
     auto wfs = std::vector<MPS>(1);
     wfs.at(0) = psi0;
@@ -76,10 +79,11 @@ int main(int argc, char *argv[])
     // psi1 having any overlap with psi0
     //
     auto [en1,psi1] = dmrg(H,wfs,randomMPS(sites),sweeps,{"Silent=",true,"Weight=",20.0});
-    auto gap = en1-energy; //compute gap energy
+    println("--- found excited state ---");
+    printfln("Energy = %0.3g, maxLinkDim = %d",en1,maxLinkDim(psi1));
 
-    enerfile1 << h[i] << " " << maxLinkDim(psi0) << " " << maxLinkDim(psi1) << " " << energy << " " << gap << " " << std::endl;
-    printfln("Iteration %d, h = %.3g, gap = %0.3g",i,h[i],gap);
+    enerfile1 << h[i] << " " << maxLinkDim(psi0) << " " << maxLinkDim(psi1) << " " << en0 << " " << en1-en0 << " " << std::endl;
+    printfln("Iteration %d done, h = %.3g, gap = %0.3g",i,h[i],en1-en0);
 
   }
   enerfile1.close();
