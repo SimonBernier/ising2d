@@ -4,8 +4,8 @@ using namespace itensor;
 
 int main(int argc, char *argv[])
   {
-  int Nx = 32;
-  int Ny = 6;
+  int Nx = 64;
+  int Ny = 5;
   double h=4.0;
 
   //write results to file
@@ -35,10 +35,10 @@ int main(int argc, char *argv[])
 
   // autompo hamiltonian
   for(auto j : lattice){
-      ampo += -1, "Sz", j.s1, "Sz", j.s2;
+      ampo += -4, "Sz", j.s1, "Sz", j.s2;
       }
   for(auto j : range1(N)){
-      ampo += -h, "Sx", j;
+      ampo += -2.0*h, "Sx", j;
       }
   
   auto state = InitState(sites); //initial state
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 
   //DMRG to find ground state at t=0
   auto H = toMPO(ampo);
-  auto [energy,psi0] = dmrg(H,state,sweeps,{"Silent=",true});
+  auto [energy,psi0] = dmrg(H,MPS(state),sweeps,{"Silent=",true});
   //PrintData(H);
   
   // create vectors of time
@@ -71,11 +71,26 @@ int main(int argc, char *argv[])
   auto args_Fit = Args("Method=","Fit","Cutoff=",1E-8,"MaxDim=",3000);
   //PrintData(expH1);
   //PrintData(expH2);
+
+  //time evolution fields h and diff
+  auto hval = std::vector<double>(1);
+  auto diff = std::vector<double>(1);
+  double step = (h-2.0)/Nt;
+  for(int j=1; j<=Nt; j++){ //make linear ramp
+    hval.push_back(h-step*j);
+    diff.push_back(-step);
+    println(hval[j-1]);
+    println(diff[j-1]);
+  }
   
+  /*
   auto psi_DM = psi0; //keep psi0 for future reference
   auto psi_Fit = psi0;
   // time evolve
   for(int i=0; i<Nt; i++){
+    for(auto j : range1(N)){
+      ampo += -2.0*diff[i], "Sx", j;
+      }
     tval.push_back(tval[i]+dt);
     // check DensityMatrix method for MPO*MPS
     psi_DM = applyMPO(expH1,psi_DM,args_DM);
@@ -94,10 +109,11 @@ int main(int argc, char *argv[])
 
     enerfile1 << tval[i+1] << " " << energy_DM << " " << maxLinkDim(psi_DM) << std::endl;
     enerfile2 << tval[i+1] << " " << energy_Fit << " " << maxLinkDim(psi_Fit) << std::endl;
-    printfln("Iteration %d, DensityMatrix energy = %0.3g, max link dim is %d",i,energy_DM,maxLinkDim(psi_DM));
+    printfln("Iteration %d, DensityMatrix energy = %0.3g, max link dim is %d",i+1,energy_DM,maxLinkDim(psi_DM));
     printfln("            ,          Fit energy = %0.3g, max link dim is %d",energy_Fit,maxLinkDim(psi_Fit));
 
   }
+  */
   enerfile1.close();
 
   return 0;
