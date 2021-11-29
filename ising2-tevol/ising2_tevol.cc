@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
   // 2d ising model parameters
   auto sweeps = Sweeps(5);
   sweeps.maxdim() = 20, 50, 100, 200, 400;
-  sweeps.cutoff() = 1E-8;
+  sweeps.cutoff() = 1E-10;
 
   //DMRG to find ground state at t=0
   auto H = toMPO(ampo);
@@ -62,36 +62,44 @@ int main(int argc, char *argv[])
   int Nt = 10;
   double dt = 0.1;
   enerfile1 << "tval" << " " << "energy" << " " << "MaxDim" << std::endl;
+  enerfile2 << "tval" << " " << "energy" << " " << "MaxDim" << std::endl;
   enerfile1 << tval[0] << " " << energy << " " << maxLinkDim(psi0) << std::endl; //print to file
+  enerfile2 << tval[0] << " " << energy << " " << maxLinkDim(psi0) << std::endl; //print to file
 
-  //time evolution operators
-  auto expH1 = toExpH(ampo, 0.5*dt*(1+Cplx_i)); //time evolve by 0.5*(1+i)*dt
-  auto expH2 = toExpH(ampo, 0.5*dt*(1-Cplx_i)); //time evolve by 0.5*(i-i)*dt
-  auto args_DM = Args("Method=","DensityMatrix","Cutoff=",1E-8,"MaxDim=",3000);
-  auto args_Fit = Args("Method=","Fit","Cutoff=",1E-8,"MaxDim=",3000);
-  //PrintData(expH1);
-  //PrintData(expH2);
+  // time evolution parameters 
+  auto args_DM = Args("Method=","DensityMatrix","Cutoff=",1E-10,"MaxDim=",3000);
+  auto args_Fit = Args("Method=","Fit","Cutoff=",1E-10,"MaxDim=",3000);
 
   //time evolution fields h and diff
   auto hval = std::vector<double>(1);
   auto diff = std::vector<double>(1);
   double step = (h-2.0)/Nt;
-  for(int j=1; j<=Nt; j++){ //make linear ramp
+  hval.at(0) = h-step;
+  diff.at(0) = -step;
+  for(int j=2; j<=Nt; j++){ //make linear ramp
     hval.push_back(h-step*j);
     diff.push_back(-step);
-    println(hval[j-1]);
-    println(diff[j-1]);
   }
   
-  /*
+  // initial conditions
   auto psi_DM = psi0; //keep psi0 for future reference
   auto psi_Fit = psi0;
+
+  //
   // time evolve
+  //
   for(int i=0; i<Nt; i++){
+    //
+    // update autoMPO
     for(auto j : range1(N)){
       ampo += -2.0*diff[i], "Sx", j;
-      }
-    tval.push_back(tval[i]+dt);
+    }
+    //
+    //time evolution operators
+    auto expH1 = toExpH(ampo, 0.5*dt*(1+Cplx_i)); //time evolve by 0.5*(1+i)*dt
+    auto expH2 = toExpH(ampo, 0.5*dt*(1-Cplx_i)); //time evolve by 0.5*(i-i)*dt
+
+    tval.push_back(tval[i]+dt); //update time vector
     // check DensityMatrix method for MPO*MPS
     psi_DM = applyMPO(expH1,psi_DM,args_DM);
     psi_DM.noPrime().normalize(); //need to do this after each to take care of prime levels
@@ -113,7 +121,7 @@ int main(int argc, char *argv[])
     printfln("            ,          Fit energy = %0.3g, max link dim is %d",energy_Fit,maxLinkDim(psi_Fit));
 
   }
-  */
+  
   enerfile1.close();
 
   return 0;
