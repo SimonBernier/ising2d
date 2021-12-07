@@ -5,7 +5,7 @@ using namespace itensor;
 int main(int argc, char *argv[])
   {
   int Nx = 16;
-  int Ny = 5;
+  int Ny = 3;
   double h = 4.0;
 
   // write results to file
@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
         ket = psi0(index)*psi0(index+Ny);
         LocalEnergy[index-1] += elt(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket);
       }
-      printfln("(%d,%d) = %0.3f", i, j, LocalEnergyDM[index-1]);
+      printfln("(%d,%d) = %0.3f", i, j, LocalEnergy[index-1]);
     }
   }
   
@@ -160,23 +160,23 @@ int main(int argc, char *argv[])
     for(int i=1; i<=Nx; i++){
       for(int j=1; j<=Ny; j++){ //this order to make orthogonality center easier to compute
         int index = (i-1)*Ny + j;
-        psi0.position(index);
+        psi_DM.position(index);
         ITensor ket;
         if(j==Ny){ //y-periodic boundary equations
-          ket = psi0(index)*psi0(index-Ny+1);
+          ket = psi_DM(index)*psi_DM(index-Ny+1);
           LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
         } else{
-          ket = psi0(index)*psi0(index+1);
+          ket = psi_DM(index)*psi_DM(index+1);
           LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
         }
         if(i<Nx){
-          ket = psi0(index)*psi0(index+Ny);
+          ket = psi_DM(index)*psi_DM(index+Ny);
           LocalEnergy[index-1] += elt(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket);
         }
       }
     }
     //write to file
-    enerfile1 << tval[0] << " " << energy_DM << " " << maxLinkDim(psi0) << " "; //print to file
+    enerfile1 << tval[0] << " " << energy_DM << " " << maxLinkDim(psi_DM) << " "; //print to file
     for(int j = 0; j<N; j++){ //save local energy values
       enerfile1 << LocalEnergyDM[j] << " ";
     }
@@ -193,23 +193,23 @@ int main(int argc, char *argv[])
     for(int i=1; i<=Nx; i++){
       for(int j=1; j<=Ny; j++){ //this order to make orthogonality center easier to compute
         int index = (i-1)*Ny + j;
-        psi0.position(index);
+        psi_Fit.position(index);
         ITensor ket;
         if(j==Ny){ //y-periodic boundary equations
-          ket = psi0(index)*psi0(index-Ny+1);
+          ket = psi_Fit(index)*psi_Fit(index-Ny+1);
           LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
         } else{
-          ket = psi0(index)*psi0(index+1);
+          ket = psi_Fit(index)*psi_Fit(index+1);
           LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
         }
         if(i<Nx){
-          ket = psi0(index)*psi0(index+Ny);
+          ket = psi_Fit(index)*psi_Fit(index+Ny);
           LocalEnergy[index-1] += elt(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket);
         }
       }
     }
     //write to file
-    enerfile2 << tval[0] << " " << energy_Fit << " " << maxLinkDim(psi0) << " ";
+    enerfile2 << tval[0] << " " << energy_Fit << " " << maxLinkDim(psi_Fit) << " ";
     for(int j = 0; j<N; j++){ //save local energy values
       enerfile2 << LocalEnergy[j] << " ";
     }
