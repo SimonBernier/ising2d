@@ -89,20 +89,19 @@ int main(int argc, char *argv[])
       } else{
         ket = psi0(index)*psi0(index+1);
         LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
+        if(i<Nx){
+          ket = psi0(index)*psi0(index+Ny);
+          LocalEnergy[index-1] += elt(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket);
+        }
       }
-      if(i<Nx){
-        ket = psi0(index)*psi0(index+Ny);
-        LocalEnergy[index-1] += elt(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket);
-      }
-      printfln("(%d,%d) = %0.3f", i, j, LocalEnergy[index-1]);
     }
   }
   
   // create vectors of time
-  auto tval = std::vector<double>(1);
-  tval.at(0) = 0.0;
-  int Nt = 10;
+  int Nt = 2;
   double dt = 0.1;
+  std::vector<double> tval(Nt+1, 0.0);
+  
   enerfile1 << "tval" << " " << "energy" << " " << "MaxDim" << " " << "localEnergy" << " " << std::endl;
   enerfile2 << "tval" << " " << "energy" << " " << "MaxDim" << " " << "localEnergy" << " " << std::endl;
   enerfile1 << tval[0] << " " << energy << " " << maxLinkDim(psi0) << " "; //print to file
@@ -147,8 +146,8 @@ int main(int argc, char *argv[])
     //time evolution operators
     auto expH1 = toExpH(ampo, 0.5*dt*(1+Cplx_i)); //time evolve by 0.5*(1+i)*dt
     auto expH2 = toExpH(ampo, 0.5*dt*(1-Cplx_i)); //time evolve by 0.5*(i-i)*dt
+    tval[i+1]=tval[i]+dt; //update time vector
 
-    tval.push_back(tval[i]+dt); //update time vector
     // check DensityMatrix method for MPO*MPS
     psi_DM = applyMPO(expH1,psi_DM,args_DM);
     psi_DM.noPrime().normalize(); //need to do this after each to take care of prime levels
@@ -176,7 +175,7 @@ int main(int argc, char *argv[])
       }
     }
     //write to file
-    enerfile1 << tval[0] << " " << energy_DM << " " << maxLinkDim(psi_DM) << " "; //print to file
+    enerfile1 << tval[i+1] << " " << energy_DM << " " << maxLinkDim(psi_DM) << " "; //print to file
     for(int j = 0; j<N; j++){ //save local energy values
       enerfile1 << LocalEnergy[j] << " ";
     }
@@ -209,7 +208,7 @@ int main(int argc, char *argv[])
       }
     }
     //write to file
-    enerfile2 << tval[0] << " " << energy_Fit << " " << maxLinkDim(psi_Fit) << " ";
+    enerfile2 << tval[i+1] << " " << energy_Fit << " " << maxLinkDim(psi_Fit) << " ";
     for(int j = 0; j<N; j++){ //save local energy values
       enerfile2 << LocalEnergy[j] << " ";
     }
