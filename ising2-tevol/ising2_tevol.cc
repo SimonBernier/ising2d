@@ -57,8 +57,7 @@ int main(int argc, char *argv[])
   auto [energy,psi0] = dmrg(H,MPS(state),sweeps,{"Silent=",true});
 
   // calculate initial local energy density
-  std::vector<double> LocalEnergyDM(N,0.0); // local energy density vector
-  std::vector<double> LocalEnergyFit(N,0.0);
+  std::vector<double> LocalEnergy(N,0.0); // local energy density vector
   
   //make 2D vector of ITensor for local energy operators
   std::vector<std::vector<ITensor>> LED(Nx, std::vector<ITensor>(Ny));
@@ -86,14 +85,14 @@ int main(int argc, char *argv[])
       ITensor ket;
       if(j==Ny){ //y-periodic boundary equations
         ket = psi0(index)*psi0(index-Ny+1);
-        LocalEnergyDM[index-1] += elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
+        LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
       } else{
         ket = psi0(index)*psi0(index+1);
-        LocalEnergyDM[index-1] += elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
+        LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
       }
       if(i<Nx){
         ket = psi0(index)*psi0(index+Ny);
-        LocalEnergyDM[index-1] += elt(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket);
+        LocalEnergy[index-1] += elt(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket);
       }
       printfln("(%d,%d) = %0.3f", i, j, LocalEnergyDM[index-1]);
     }
@@ -109,8 +108,8 @@ int main(int argc, char *argv[])
   enerfile1 << tval[0] << " " << energy << " " << maxLinkDim(psi0) << " "; //print to file
   enerfile2 << tval[0] << " " << energy << " " << maxLinkDim(psi0) << " "; //print to file
   for(int j = 0; j<N; j++){ //save local energy values
-    enerfile1 << LocalEnergyDM[j] << " ";
-    enerfile2 << LocalEnergyDM[j] << " ";
+    enerfile1 << LocalEnergy[j] << " ";
+    enerfile2 << LocalEnergy[j] << " ";
   }
   enerfile1 << std::endl;
   enerfile2 << std::endl;
@@ -155,16 +154,31 @@ int main(int argc, char *argv[])
     psi_DM.noPrime().normalize(); //need to do this after each to take care of prime levels
     psi_DM = applyMPO(expH2,psi_DM,args_DM);
     psi_DM.noPrime().normalize(); //need to do this after each to take care of prime levels
+    auto energy_DM = innerC(psi_DM,H,psi_DM).real();
 
     // calculate local energy density
-    for(auto b : lattice){
-      psi_DM.position(b.s1);
-      auto ket = psi_DM(b.s1)*psi_DM(b.s2);
-      auto LED = -4.0*sites.op("Sz",b.s1)*sites.op("Sz",b.s2);
-      LocalEnergyDM[b.s1] += inner(ket,LED,ket);
+    for(int i=1; i<=Nx; i++){
+      for(int j=1; j<=Ny; j++){ //this order to make orthogonality center easier to compute
+        int index = (i-1)*Ny + j;
+        psi0.position(index);
+        ITensor ket;
+        if(j==Ny){ //y-periodic boundary equations
+          ket = psi0(index)*psi0(index-Ny+1);
+          LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
+        } else{
+          ket = psi0(index)*psi0(index+1);
+          LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
+        }
+        if(i<Nx){
+          ket = psi0(index)*psi0(index+Ny);
+          LocalEnergy[index-1] += elt(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket);
+        }
+      }
     }
+    //write to file
+    enerfile1 << tval[0] << " " << energy_DM << " " << maxLinkDim(psi0) << " "; //print to file
     for(int j = 0; j<N; j++){ //save local energy values
-    enerfile1 << LocalEnergyDM[j] << " ";
+      enerfile1 << LocalEnergyDM[j] << " ";
     }
     enerfile1 << std::endl;
 
@@ -173,24 +187,34 @@ int main(int argc, char *argv[])
     psi_Fit.noPrime().normalize(); //need to do this after each to take care of prime levels
     psi_Fit = applyMPO(expH2,psi_Fit,args_Fit);
     psi_Fit.noPrime().normalize(); //need to do this after each to take care of prime levels
-
-    // calculate local energy density
-    for(auto b : lattice){
-      psi_DM.position(b.s1);
-      auto ket = psi_Fit(b.s1)*psi_Fit(b.s2);
-      auto LED = -4.0*sites.op("Sz",b.s1)*sites.op("Sz",b.s2);
-      LocalEnergyFit[b.s1] += inner(ket,LED,ket);
-    }
-    for(int j = 0; j<N; j++){ //save local energy values
-    enerfile2 << LocalEnergyFit[j] << " ";
-    }
-    enerfile2 << std::endl;
-    
-    auto energy_DM = innerC(psi_DM,H,psi_DM).real();
     auto energy_Fit = innerC(psi_Fit,H,psi_Fit).real();
 
-    enerfile1 << tval[i+1] << " " << energy_DM << " " << maxLinkDim(psi_DM) << std::endl;
-    enerfile2 << tval[i+1] << " " << energy_Fit << " " << maxLinkDim(psi_Fit) << std::endl;
+    // calculate local energy density
+    for(int i=1; i<=Nx; i++){
+      for(int j=1; j<=Ny; j++){ //this order to make orthogonality center easier to compute
+        int index = (i-1)*Ny + j;
+        psi0.position(index);
+        ITensor ket;
+        if(j==Ny){ //y-periodic boundary equations
+          ket = psi0(index)*psi0(index-Ny+1);
+          LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
+        } else{
+          ket = psi0(index)*psi0(index+1);
+          LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
+        }
+        if(i<Nx){
+          ket = psi0(index)*psi0(index+Ny);
+          LocalEnergy[index-1] += elt(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket);
+        }
+      }
+    }
+    //write to file
+    enerfile2 << tval[0] << " " << energy_Fit << " " << maxLinkDim(psi0) << " ";
+    for(int j = 0; j<N; j++){ //save local energy values
+      enerfile2 << LocalEnergy[j] << " ";
+    }
+    enerfile2 << std::endl;
+
     printfln("Iteration %d, DensityMatrix energy = %0.3g, max link dim is %d",i+1,energy_DM,maxLinkDim(psi_DM));
     printfln("            ,          Fit energy = %0.3g, max link dim is %d",energy_Fit,maxLinkDim(psi_Fit));
 
