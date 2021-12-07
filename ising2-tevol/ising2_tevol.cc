@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
   }
 
   auto N = Nx * Ny;
-  auto sites = SpinHalf(N,{"ConserveQNs=",false});
+  auto sites = SpinHalf(N);
 
   auto ampo = AutoMPO(sites);
   auto lattice = squareLattice(Nx, Ny, {"YPeriodic = ", true});
@@ -57,46 +57,55 @@ int main(int argc, char *argv[])
   auto [energy,psi0] = dmrg(H,MPS(state),sweeps,{"Silent=",true});
 
   // calculate initial local energy density
-  auto LocalEnergyDM = std::vector<double>(N,0.0); // local energy density vector
-  auto LocalEnergyFit = std::vector<double>(N,0.0);
-
+  std::vector<double> LocalEnergyDM(N,0.0); // local energy density vector
+  std::vector<double> LocalEnergyFit(N,0.0);
+  
   //make 2D vector of ITensor for local energy operators
-  std::vector<std::vector<ITensor>> LED(Ny, std::vector<ITensor> (Nx));
-  for(int i=1; i<=Ny; i++){
-    for(int j=1; j<=Nx; i++){
-      if(i==Ny){ //y-periodic boundary equations
-        LED[i][j] += -4.0*sites.op("Sz",(j-1)*Ny+i)*sites.op("Sz",(j-1)*Ny+1);
-      }
-      else{
-        LED[i][j] += -4.0*sites.op("Sz",(j-1)*Ny+i)*sites.op("Sz",(j-1)*Ny+i+1);
-      }
-      if(j<Nx){
-        LED[i][j] += -4.0*sites.op("Sz",(j-1)*Ny+i)*sites.op("Sz",j*Ny+i);
+  std::vector<std::vector<ITensor>> LED(Nx, std::vector<ITensor>(Ny));
+  std::vector<std::vector<ITensor>> LED_LR(Nx, std::vector<ITensor>(Ny));
+  for(int i=1; i<=Nx; i++){ //vertical energy density
+    for(int j=1; j<=Ny; j++){
+      if(j==Ny){ //y-periodic boundary equations
+        LED[i-1][j-1] = -4.0*sites.op("Sz",(i-1)*Ny+j)*sites.op("Sz",(i-1)*Ny+1);
+      } else{
+        LED[i-1][j-1] = -4.0*sites.op("Sz",(i-1)*Ny+j)*sites.op("Sz",(i-1)*Ny+j+1);
       }
     }
   }
+  for(int i=1; i<Nx; i++){ //horizontal energy density
+    for(int j=1; j<=Ny; j++){
+      LED_LR[i-1][j-1] = -4.0*sites.op("Sz",(i-1)*Ny+j)*sites.op("Sz",i*Ny+j);
+    }
+  }
+  
   // calculate local energy density
-  for(int j=1; j<=Nx; j++){
-    for(int i=1; i<=Ny; i++){ //this order to make orthogonality center easier to compute
-      int index = (j-1)*Ny + i;
+  for(int i=1; i<=Nx; i++){
+    for(int j=1; j<=Ny; j++){ //this order to make orthogonality center easier to compute
+      int index = (i-1)*Ny + j;
       psi0.position(index);
-      ITensor ket = psi0(index);
-      for(int k=1; k<=Ny; k++){
-        ket *= psi0(index+k); 
+      ITensor ket;
+      if(j==Ny){ //y-periodic boundary equations
+        ket = psi0(index)*psi0(index-Ny+1);
+        LocalEnergyDM[index-1] += elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
+      } else{
+        ket = psi0(index)*psi0(index+1);
+        LocalEnergyDM[index-1] += elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
       }
-      LocalEnergyDM[index] = elt(dag(prime(ket,"Site"))*LED[i][j]*ket);
-      printfln("(%d,%d) = %0.3f",j,i,LocalEnergyDM[index]);
+      if(i<Nx){
+        ket = psi0(index)*psi0(index+Ny);
+        LocalEnergyDM[index-1] += elt(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket);
+      }
+      printfln("(%d,%d) = %0.3f", i, j, LocalEnergyDM[index-1]);
     }
   }
-  printfln("here!");
   
   // create vectors of time
   auto tval = std::vector<double>(1);
   tval.at(0) = 0.0;
   int Nt = 10;
   double dt = 0.1;
-  enerfile1 << "tval" << " " << "energy" << " " << "MaxDim" << " " << "local energy" << " " << std::endl;
-  enerfile2 << "tval" << " " << "energy" << " " << "MaxDim" << " " << "local energy" << " " << std::endl;
+  enerfile1 << "tval" << " " << "energy" << " " << "MaxDim" << " " << "localEnergy" << " " << std::endl;
+  enerfile2 << "tval" << " " << "energy" << " " << "MaxDim" << " " << "localEnergy" << " " << std::endl;
   enerfile1 << tval[0] << " " << energy << " " << maxLinkDim(psi0) << " "; //print to file
   enerfile2 << tval[0] << " " << energy << " " << maxLinkDim(psi0) << " "; //print to file
   for(int j = 0; j<N; j++){ //save local energy values
@@ -106,7 +115,7 @@ int main(int argc, char *argv[])
   enerfile1 << std::endl;
   enerfile2 << std::endl;
 
-/*
+
   // time evolution parameters 
   auto args_DM = Args("Method=","DensityMatrix","Cutoff=",1E-10,"MaxDim=",3000);
   auto args_Fit = Args("Method=","Fit","Cutoff=",1E-10,"MaxDim=",3000);
@@ -125,8 +134,7 @@ int main(int argc, char *argv[])
   // initial conditions
   auto psi_DM = psi0; //keep psi0 for future reference
   auto psi_Fit = psi0;
-  */
-/*
+  
   //
   // time evolve
   //
@@ -187,7 +195,7 @@ int main(int argc, char *argv[])
     printfln("            ,          Fit energy = %0.3g, max link dim is %d",energy_Fit,maxLinkDim(psi_Fit));
 
   }
-  */
+  
   enerfile1.close(); enerfile2.close();
 
   return 0;
