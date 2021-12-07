@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
     //write to file
     enerfile1 << tval[0] << " " << energy_DM << " " << maxLinkDim(psi_DM) << " "; //print to file
     for(int j = 0; j<N; j++){ //save local energy values
-      enerfile1 << LocalEnergyDM[j] << " ";
+      enerfile1 << LocalEnergy[j] << " ";
     }
     enerfile1 << std::endl;
 
