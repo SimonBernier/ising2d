@@ -164,14 +164,14 @@ int main(int argc, char *argv[])
         ITensor ket;
         if(j==Ny){ //y-periodic boundary equations
           ket = psi_DM(index)*psi_DM(index-Ny+1);
-          LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
+          LocalEnergy[index-1] = eltC(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket).real();
         } else{
           ket = psi_DM(index)*psi_DM(index+1);
-          LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
+          LocalEnergy[index-1] = eltC(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket).real();
         }
         if(i<Nx){
           ket = psi_DM(index)*psi_DM(index+Ny);
-          LocalEnergy[index-1] += elt(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket);
+          LocalEnergy[index-1] += eltC(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket).real();
         }
       }
     }
@@ -197,14 +197,14 @@ int main(int argc, char *argv[])
         ITensor ket;
         if(j==Ny){ //y-periodic boundary equations
           ket = psi_Fit(index)*psi_Fit(index-Ny+1);
-          LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
+          LocalEnergy[index-1] = eltC(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket).real();
         } else{
           ket = psi_Fit(index)*psi_Fit(index+1);
-          LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
+          LocalEnergy[index-1] = eltC(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket).real();
         }
         if(i<Nx){
           ket = psi_Fit(index)*psi_Fit(index+Ny);
-          LocalEnergy[index-1] += elt(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket);
+          LocalEnergy[index-1] += eltC(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket).real();
         }
       }
     }
