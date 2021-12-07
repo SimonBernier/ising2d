@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
   }
 
   auto N = Nx * Ny;
-  auto sites = SpinHalf(N);
+  auto sites = SpinHalf(N,{"ConserveQNs=",false});
 
   auto ampo = AutoMPO(sites);
   auto lattice = squareLattice(Nx, Ny, {"YPeriodic = ", true});
