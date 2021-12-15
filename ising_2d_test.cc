@@ -5,8 +5,8 @@ using namespace itensor;
 int main(int argc, char *argv[])
   {
   int Nx = 64;
-  int Ny = 10;
-  double h = 4.0;
+  int Ny = 3;
+  double h = 2.61;
   if(argc > 3)
     h = std::stof(argv[3]);
   if(argc > 2)
@@ -30,9 +30,9 @@ int main(int argc, char *argv[])
   auto H = toMPO(ampo); //12x12 matrices
   //auto H = toMPO(ampo,{"Exact=",true}); //14x14 matrices
 
-  PrintData(H);
+  //PrintData(H);
 
-  /*
+  
   auto state = InitState(sites);
   for(auto j : range1(N))
       {
@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
   //PrintData(totalQN(psi));
   PrintData(maxLinkDim(psi));
   PrintData(energy);
-  */
+  
 
   return 0;
   }
