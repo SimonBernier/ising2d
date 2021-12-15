@@ -85,11 +85,11 @@ int main(int argc, char *argv[])
       }
     }
   }
-  
+
   //DMRG to find ground state at t=0
   auto H = toMPO(ampo);
   auto [energy,psi] = dmrg(H,MPS(state),sweeps,{"Silent=",true});
-  
+
   // calculate local energy density
   LocalEnergy = localEnergy(Nx, Ny, sites, psi, LED, LEDyPBC);
 
@@ -102,11 +102,10 @@ int main(int argc, char *argv[])
   enerfile << std::endl;
 
   // time evolution parameters
-  auto args_DM = Args("Method=","DensityMatrix","Cutoff=",1E-10,"MaxDim=",3000);
-  auto args_Fit = Args("Method=","Fit","Cutoff=",1E-10,"MaxDim=",3000);
+  auto args = Args("Method=","Fit","Cutoff=",1E-10,"MaxDim=",3000);
 
   //time evolution fields h and diff
-  std::vector<double> tval(Nt, 0.0); //time vector
+  double tval = 0.0; //time
   auto hval = std::vector<double>(Nt+1,0.0);
   auto diff = std::vector<double>(Nt+1,0.0);
   int Nstep = tau/dt;
@@ -121,11 +120,11 @@ int main(int argc, char *argv[])
     }
     diff[j] = hval[j]-hval[j-1];
   }
-  
+
   //
   // time evolve
   //
-  for(int n=0; n<Nt; n++){
+  for(int n=1; n<=Nt; n++){
     //
     // update autoMPO
     for(auto j : range1(N)){
@@ -135,26 +134,26 @@ int main(int argc, char *argv[])
     //time evolution operators
     auto expH1 = toExpH(ampo, 0.5*dt*(1+Cplx_i)); //time evolve by 0.5*(1+i)*dt
     auto expH2 = toExpH(ampo, 0.5*dt*(1-Cplx_i)); //time evolve by 0.5*(i-i)*dt
-    tval[n]=(n+1)*dt; //update time vector
 
     //Fit method for MPO*MPS
-    psi = applyMPO(expH1,psi,args_Fit);
+    psi = applyMPO(expH1,psi,args);
     psi.noPrime().normalize(); //need to do this after each to take care of prime levels
-    psi = applyMPO(expH2,psi,args_Fit);
+    psi = applyMPO(expH2,psi,args);
     psi.noPrime().normalize(); //need to do this after each to take care of prime levels
-    auto energy = innerC(psi,H,psi).real();
+    auto energy = innerC(psi,toMPO(ampo),psi).real();
 
     // calculate local energy density
     LocalEnergy = localEnergy(Nx, Ny, sites, psi, LED, LEDyPBC);
 
     //write to file
-    enerfile << tval[n] << " " << energy << " " << maxLinkDim(psi) << " ";
+    tval += dt; //update time vector
+    enerfile << tval << " " << energy << " " << maxLinkDim(psi) << " ";
     for(int j = 0; j<N; j++){ //save local energy values
       enerfile << LocalEnergy[j] << " ";
     }
     enerfile << std::endl;
 
-    printfln("Iteration %d,energy = %0.3g, max link dim is %d",n+1,energy,maxLinkDim(psi));
+    printfln("\nIteration %d, time = %0.2f; energy = %0.3g, max link dim is %d",n,tval,energy,maxLinkDim(psi));
 
   }
 
@@ -176,7 +175,7 @@ int main(int argc, char *argv[])
 std::vector<double> localEnergy(int Nx, int Ny, SiteSet sites, MPS psi, std::vector<std::vector<ITensor>> LED, std::vector<ITensor> LEDyPBC){
   std::vector<double> LocalEnergy(length(psi),0.0);
   for(int i=1; i<=Nx; i++){
-    for(int j=1; j<=Ny; j++){ 
+    for(int j=1; j<=Ny; j++){
       int index = (i-1)*Ny + j; //this order to make orthogonality center easier to compute
       ITensor ket;
       if(j==Ny){ //y-periodic boundary equations with swap gates
@@ -189,7 +188,7 @@ std::vector<double> localEnergy(int Nx, int Ny, SiteSet sites, MPS psi, std::vec
           psi.svdBond(g.i1(), AA, Fromleft); //svd to restore MPS
           psi.position(g.i2()); //orthogonality center moves to the right
         }
-        
+
         ket = psi(index-1)*psi(index);
         LocalEnergy[index-1] = eltC( dag(prime(ket,"Site")) * LEDyPBC[i-1] * ket).real();
 
@@ -240,5 +239,7 @@ std::vector<double> localEnergy(int Nx, int Ny, SiteSet sites, MPS psi, std::vec
     }// for j
   }// for i
   psi.orthogonalize({"Cutoff=",1E-12}); //restore psi bond dimensions
+
   return LocalEnergy;
+  
 }//localEnergy
