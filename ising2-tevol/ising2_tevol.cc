@@ -5,7 +5,7 @@ using namespace itensor;
 int main(int argc, char *argv[])
   {
   int Nx = 16;
-  int Ny = 3;
+  int Ny = 4;
   double h = 4.0;
 
   // write results to file
@@ -52,53 +52,106 @@ int main(int argc, char *argv[])
   sweeps.maxdim() = 20, 50, 100, 200, 400;
   sweeps.cutoff() = 1E-10;
 
-  //DMRG to find ground state at t=0
-  auto H = toMPO(ampo);
-  auto [energy,psi0] = dmrg(H,MPS(state),sweeps,{"Silent=",true});
-
   // calculate initial local energy density
   std::vector<double> LocalEnergy(N,0.0); // local energy density vector
   
   //make 2D vector of ITensor for local energy operators
+  //long-range interactions have the same structure as nearest-neighbour when we use swap gates
   std::vector<std::vector<ITensor>> LED(Nx, std::vector<ITensor>(Ny));
-  std::vector<std::vector<ITensor>> LED_LR(Nx, std::vector<ITensor>(Ny));
-  for(int i=1; i<=Nx; i++){ //vertical energy density
+  std::vector<ITensor> LEDyPBC(Nx);
+  
+  for(int i=1; i<=Nx; i++){
     for(int j=1; j<=Ny; j++){
-      if(j==Ny){ //y-periodic boundary equations
-        LED[i-1][j-1] = -4.0*sites.op("Sz",(i-1)*Ny+j)*sites.op("Sz",(i-1)*Ny+1);
-      } else{
-        LED[i-1][j-1] = -4.0*sites.op("Sz",(i-1)*Ny+j)*sites.op("Sz",(i-1)*Ny+j+1);
+      int index = (i-1)*Ny+j;
+      //MPS nearest-neighbour
+      //good for long-range interaction where index+Ny is brought to index+1
+      if(index<N){
+        LED[i-1][j-1] = -4.0*sites.op("Sz",index)*sites.op("Sz",index+1);
+      }
+      //y-periodic boundary equations
+      if(j==Ny){
+        // site index-Ny+1 is moved to site index-1 with swap gates
+        LEDyPBC[i-1] = -4.0*sites.op("Sz",index-1)*sites.op("Sz",index);
       }
     }
   }
-  for(int i=1; i<Nx; i++){ //horizontal energy density
-    for(int j=1; j<=Ny; j++){
-      LED_LR[i-1][j-1] = -4.0*sites.op("Sz",(i-1)*Ny+j)*sites.op("Sz",i*Ny+j);
-    }
-  }
+  
+  //DMRG to find ground state at t=0
+  auto H = toMPO(ampo);
+  auto [energy,psi0] = dmrg(H,MPS(state),sweeps,{"Silent=",true});
   
   // calculate local energy density
   for(int i=1; i<=Nx; i++){
-    for(int j=1; j<=Ny; j++){ //this order to make orthogonality center easier to compute
-      int index = (i-1)*Ny + j;
-      psi0.position(index);
+    for(int j=1; j<=Ny; j++){ 
+      int index = (i-1)*Ny + j; //this order to make orthogonality center easier to compute
       ITensor ket;
-      if(j==Ny){ //y-periodic boundary equations
-        ket = psi0(index)*psi0(index-Ny+1);
-        LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
-      } else{
-        ket = psi0(index)*psi0(index+1);
-        LocalEnergy[index-1] = elt(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket);
-        if(i<Nx){
-          ket = psi0(index)*psi0(index+Ny);
-          LocalEnergy[index-1] += elt(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket);
+      if(j==Ny){ //y-periodic boundary equations with swap gates
+        psi0.position(index-Ny+1);
+        for(int n=1; n<Ny-1; n++){
+          int b = index-Ny+n; //define gate bond
+          auto g = BondGate(sites,b,b+1);
+          auto AA = psi0(b)*psi0(b+1)*g.gate(); //contract over bond b
+          AA.replaceTags("Site,1","Site,0"); //replace site tags for correct svd
+          psi0.svdBond(g.i1(), AA, Fromleft); //svd to restore MPS
+          psi0.position(g.i2()); //orthogonality center moves to the right
         }
-      }
-    }
-  }
-  
+        
+        ket = psi0(index-1)*psi0(index);
+        auto energy = elt( dag(prime(ket,"Site")) * LEDyPBC[i-1] * ket);
+        LocalEnergy[index-1] = energy;
+
+        //restore the state to the original MPS
+        for(int n=Ny-1; n>1; n--){
+          int b = index-Ny+n;
+          auto g = BondGate(sites,b-1,b);
+          auto AA = psi0(b-1)*psi0(b)*g.gate(); //contract over bond b
+          AA.replaceTags("Site,1","Site,0");
+          psi0.svdBond(g.i1(), AA, Fromright); //svd from the right
+          psi0.position(g.i1()); //move orthogonality center to the left  
+        }
+      }// y-periodic
+
+      //original nearest-neighbour code
+      else{ 
+        psi0.position(index);
+        ket = psi0(index)*psi0(index+1);
+        auto energy = elt(dag(prime(ket,"Site")) * LED[i-1][j-1] * ket);
+        LocalEnergy[index-1] = energy;
+      } //nearest-neighbour
+
+      if(i<Nx){
+        psi0.position(index+Ny); //site to bring to index+1  
+
+        // bring index+Ny to position index+1
+        for(int n=Ny; n>1; n--){
+          int b = index+n;
+          auto g = BondGate(sites,b-1,b);
+          auto AA = psi0(b-1)*psi0(b)*g.gate(); //contract over bond b
+          AA.replaceTags("Site,1","Site,0"); //replace site tags for correct svd
+          psi0.svdBond(g.i1(), AA, Fromright); //svd to restore MPS
+          psi0.position(g.i1()); //orthogonality center moves to the left
+        }
+
+        ket = psi0(index)*psi0(index+1);
+        auto energy = elt(dag(prime(ket,"Site")) * LED[i-1][j-1] * ket);
+        LocalEnergy[index-1] += energy;
+
+        // bring index+1 back to position index+Ny
+        for(int n=1; n<Ny; n++){
+          int b = index+n;
+          auto g = BondGate(sites,b,b+1);
+          auto AA = psi0(b)*psi0(b+1)*g.gate(); //contract over bond b
+          AA.replaceTags("Site,1","Site,0"); //replace site tags for correct svd
+          psi0.svdBond(g.i1(), AA, Fromleft); //svd to restore MPS
+          psi0.position(g.i2()); //orthogonality center moves to the right
+        }
+      }//long-range interaction
+    }// for j
+  }// for i
+  psi0.orthogonalize({"Cutoff=",1E-12}); //restore psi0 bond dimensions
+
   // create vectors of time
-  int Nt = 2;
+  int Nt = 20;
   double dt = 0.1;
   std::vector<double> tval(Nt+1, 0.0);
   
@@ -119,14 +172,18 @@ int main(int argc, char *argv[])
   auto args_Fit = Args("Method=","Fit","Cutoff=",1E-10,"MaxDim=",3000);
 
   //time evolution fields h and diff
-  auto hval = std::vector<double>(1);
-  auto diff = std::vector<double>(1);
-  double step = (h-2.0)/Nt;
-  hval.at(0) = h-step;
-  diff.at(0) = -step;
-  for(int j=2; j<=Nt; j++){ //make linear ramp
-    hval.push_back(h-step*j);
-    diff.push_back(-step);
+  auto hval = std::vector<double>(Nt,0.0);
+  auto diff = std::vector<double>(Nt,0.0);
+  double step = 2.0*(h-2.0)/Nt;
+  hval[0] = h-step;
+  diff[0] = -step;
+  for(int j=1; j<Nt; j++){ //make linear ramp
+    if(j<=Nt/2){
+      hval[j] = h-step*j;
+    } else{
+      hval[j] = hval[j-1];
+    }
+    diff[j] = hval[j]-hval[j-1];
   }
   
   // initial conditions
@@ -157,23 +214,71 @@ int main(int argc, char *argv[])
 
     // calculate local energy density
     for(int i=1; i<=Nx; i++){
-      for(int j=1; j<=Ny; j++){ //this order to make orthogonality center easier to compute
-        int index = (i-1)*Ny + j;
-        psi_DM.position(index);
+      for(int j=1; j<=Ny; j++){ 
+        int index = (i-1)*Ny + j; //this order to make orthogonality center easier to compute
         ITensor ket;
-        if(j==Ny){ //y-periodic boundary equations
-          ket = psi_DM(index)*psi_DM(index-Ny+1);
-          LocalEnergy[index-1] = eltC(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket).real();
-        } else{
+        if(j==Ny){ //y-periodic boundary equations with swap gates
+          psi_DM.position(index-Ny+1);
+          for(int n=1; n<Ny-1; n++){
+            int b = index-Ny+n; //define gate bond
+            auto g = BondGate(sites,b,b+1);
+            auto AA = psi_DM(b)*psi_DM(b+1)*g.gate(); //contract over bond b
+            AA.replaceTags("Site,1","Site,0"); //replace site tags for correct svd
+            psi_DM.svdBond(g.i1(), AA, Fromleft); //svd to restore MPS
+            psi_DM.position(g.i2()); //orthogonality center moves to the right
+          }
+          
+          ket = psi_DM(index-1)*psi_DM(index);
+          LocalEnergy[index-1] = eltC( dag(prime(ket,"Site")) * LEDyPBC[i-1] * ket).real();;
+
+          //restore the state to the original MPS
+          for(int n=Ny-1; n>1; n--){
+            int b = index-Ny+n;
+            auto g = BondGate(sites,b-1,b);
+            auto AA = psi_DM(b-1)*psi_DM(b)*g.gate(); //contract over bond b
+            AA.replaceTags("Site,1","Site,0");
+            psi_DM.svdBond(g.i1(), AA, Fromright); //svd from the right
+            psi_DM.position(g.i1()); //move orthogonality center to the left  
+          }
+        }// y-periodic
+
+        //original nearest-neighbour code
+        else{ 
+          psi_DM.position(index);
           ket = psi_DM(index)*psi_DM(index+1);
-          LocalEnergy[index-1] = eltC(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket).real();
-        }
+          LocalEnergy[index-1] = eltC(dag(prime(ket,"Site")) * LED[i-1][j-1] * ket).real();
+        } //nearest-neighbour
+
         if(i<Nx){
-          ket = psi_DM(index)*psi_DM(index+Ny);
-          LocalEnergy[index-1] += eltC(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket).real();
-        }
-      }
-    }
+          psi_DM.position(index+Ny); //site to bring to index+1  
+
+          // bring index+Ny to position index+1
+          for(int n=Ny; n>1; n--){
+            int b = index+n;
+            auto g = BondGate(sites,b-1,b);
+            auto AA = psi_DM(b-1)*psi_DM(b)*g.gate(); //contract over bond b
+            AA.replaceTags("Site,1","Site,0"); //replace site tags for correct svd
+            psi_DM.svdBond(g.i1(), AA, Fromright); //svd to restore MPS
+            psi_DM.position(g.i1()); //orthogonality center moves to the left
+          }
+
+          ket = psi_DM(index)*psi_DM(index+1);
+          LocalEnergy[index-1] += eltC(dag(prime(ket,"Site")) * LED[i-1][j-1] * ket).real();
+
+          // bring index+1 back to position index+Ny
+          for(int n=1; n<Ny; n++){
+            int b = index+n;
+            auto g = BondGate(sites,b,b+1);
+            auto AA = psi_DM(b)*psi_DM(b+1)*g.gate(); //contract over bond b
+            AA.replaceTags("Site,1","Site,0"); //replace site tags for correct svd
+            psi_DM.svdBond(g.i1(), AA, Fromleft); //svd to restore MPS
+            psi_DM.position(g.i2()); //orthogonality center moves to the right
+          }
+        }//long-range interaction
+      }// for j
+    }// for i
+    psi_DM.orthogonalize({"Cutoff=",1E-12}); //restore psi_DM bond dimensions
+    
     //write to file
     enerfile1 << tval[i+1] << " " << energy_DM << " " << maxLinkDim(psi_DM) << " "; //print to file
     for(int j = 0; j<N; j++){ //save local energy values
@@ -190,23 +295,71 @@ int main(int argc, char *argv[])
 
     // calculate local energy density
     for(int i=1; i<=Nx; i++){
-      for(int j=1; j<=Ny; j++){ //this order to make orthogonality center easier to compute
-        int index = (i-1)*Ny + j;
-        psi_Fit.position(index);
+      for(int j=1; j<=Ny; j++){ 
+        int index = (i-1)*Ny + j; //this order to make orthogonality center easier to compute
         ITensor ket;
-        if(j==Ny){ //y-periodic boundary equations
-          ket = psi_Fit(index)*psi_Fit(index-Ny+1);
-          LocalEnergy[index-1] = eltC(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket).real();
-        } else{
+        if(j==Ny){ //y-periodic boundary equations with swap gates
+          psi_Fit.position(index-Ny+1);
+          for(int n=1; n<Ny-1; n++){
+            int b = index-Ny+n; //define gate bond
+            auto g = BondGate(sites,b,b+1);
+            auto AA = psi_Fit(b)*psi_Fit(b+1)*g.gate(); //contract over bond b
+            AA.replaceTags("Site,1","Site,0"); //replace site tags for correct svd
+            psi_Fit.svdBond(g.i1(), AA, Fromleft); //svd to restore MPS
+            psi_Fit.position(g.i2()); //orthogonality center moves to the right
+          }
+          
+          ket = psi_Fit(index-1)*psi_Fit(index);
+          LocalEnergy[index-1] = eltC( dag(prime(ket,"Site")) * LEDyPBC[i-1] * ket).real();
+
+          //restore the state to the original MPS
+          for(int n=Ny-1; n>1; n--){
+            int b = index-Ny+n;
+            auto g = BondGate(sites,b-1,b);
+            auto AA = psi_Fit(b-1)*psi_Fit(b)*g.gate(); //contract over bond b
+            AA.replaceTags("Site,1","Site,0");
+            psi_Fit.svdBond(g.i1(), AA, Fromright); //svd from the right
+            psi_Fit.position(g.i1()); //move orthogonality center to the left  
+          }
+        }// y-periodic
+
+        //original nearest-neighbour code
+        else{ 
+          psi_Fit.position(index);
           ket = psi_Fit(index)*psi_Fit(index+1);
-          LocalEnergy[index-1] = eltC(dag(prime(ket,"Site"))*LED[i-1][j-1]*ket).real();
-        }
+          LocalEnergy[index-1] = eltC(dag(prime(ket,"Site")) * LED[i-1][j-1] * ket).real();
+        } //nearest-neighbour
+
         if(i<Nx){
-          ket = psi_Fit(index)*psi_Fit(index+Ny);
-          LocalEnergy[index-1] += eltC(dag(prime(ket,"Site"))*LED_LR[i-1][j-1]*ket).real();
-        }
-      }
-    }
+          psi_Fit.position(index+Ny); //site to bring to index+1  
+
+          // bring index+Ny to position index+1
+          for(int n=Ny; n>1; n--){
+            int b = index+n;
+            auto g = BondGate(sites,b-1,b);
+            auto AA = psi_Fit(b-1)*psi_Fit(b)*g.gate(); //contract over bond b
+            AA.replaceTags("Site,1","Site,0"); //replace site tags for correct svd
+            psi_Fit.svdBond(g.i1(), AA, Fromright); //svd to restore MPS
+            psi_Fit.position(g.i1()); //orthogonality center moves to the left
+          }
+
+          ket = psi_Fit(index)*psi_Fit(index+1);
+          LocalEnergy[index-1] += eltC(dag(prime(ket,"Site")) * LED[i-1][j-1] * ket).real();
+
+          // bring index+1 back to position index+Ny
+          for(int n=1; n<Ny; n++){
+            int b = index+n;
+            auto g = BondGate(sites,b,b+1);
+            auto AA = psi_Fit(b)*psi_Fit(b+1)*g.gate(); //contract over bond b
+            AA.replaceTags("Site,1","Site,0"); //replace site tags for correct svd
+            psi_Fit.svdBond(g.i1(), AA, Fromleft); //svd to restore MPS
+            psi_Fit.position(g.i2()); //orthogonality center moves to the right
+          }
+        }//long-range interaction
+      }// for j
+    }// for i
+    psi_Fit.orthogonalize({"Cutoff=",1E-12}); //restore psi_Fit bond dimensions
+    
     //write to file
     enerfile2 << tval[i+1] << " " << energy_Fit << " " << maxLinkDim(psi_Fit) << " ";
     for(int j = 0; j<N; j++){ //save local energy values
