@@ -6,7 +6,7 @@ using namespace itensor;
 std::vector<double> localEnergy(int, int, SiteSet, MPS, std::vector<std::vector<ITensor>>,
                                 std::vector<ITensor>, std::vector<std::vector<ITensor>>);
 //time stepping by dt with MPO method
-void timeStepMPO(AutoMPO, MPS &, MPO, double, Args);
+void timeStepMPO(AutoMPO, MPS&, double, Args);
 //makes gates to pass to function gateTEvol
 std::vector<BondGate> makeGates(int, int, double, double, SiteSet, std::vector<std::vector<ITensor>>,
                                 std::vector<ITensor>, std::vector<std::vector<ITensor>>);
@@ -178,13 +178,14 @@ int main(int argc, char *argv[])
         ampo += -2.0*diff[n], "Sx", j;
       }
       // MPO time step, overwriting psi when done
-      timeStepMPO(ampo, psi, Hf, dt, args);
+      timeStepMPO(ampo, psi, dt, args);
     }
     if(method == 1){
       //Create a std::vector (dynamically sizeable array) to hold the Trotter gates
       std::vector<BondGate> gates = makeGates(Nx, Ny, hval[n]-hF, dt, sites, LED, LEDyPBC, LED_LR);
       //Time evolve, orthogonalizing and overwriting psi when done
-      gateTEvol(gates,dt,dt,psi,args);
+      gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false,"Normalize=",false});
+      psi.orthogonalize(args);
     }
     // calculate energy <psi(t)|H_final|psi(t)>
     energy = innerC(psi,Hf,psi).real();
@@ -283,7 +284,7 @@ std::vector<double> localEnergy(int Nx, int Ny, SiteSet sites, MPS psi,
   
 }//localEnergy
 
-void timeStepMPO(AutoMPO ampo, MPS &psi, MPO Hf, double dt, Args args)
+void timeStepMPO(AutoMPO ampo, MPS& psi, double dt, Args args)
   {
     //time evolution operators
     auto expH1 = toExpH(ampo, 0.5*dt*(1+Cplx_i)); //time evolve by 0.5*(1+i)*dt
@@ -291,9 +292,9 @@ void timeStepMPO(AutoMPO ampo, MPS &psi, MPO Hf, double dt, Args args)
 
     //Fit method for MPO*MPS
     psi = applyMPO(expH1,psi,args);
-    psi.noPrime().normalize(); //need to do this after each to take care of prime levels
+    psi.noPrime(); //need to do this after each to take care of prime levels
     psi = applyMPO(expH2,psi,args);
-    psi.noPrime().normalize(); //need to do this after each to take care of prime levels
+    psi.noPrime(); //need to do this after each to take care of prime levels
 
   }
 
