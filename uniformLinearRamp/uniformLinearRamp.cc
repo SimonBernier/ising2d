@@ -180,13 +180,14 @@ int main(int argc, char *argv[])
       // MPO time step, overwriting psi when done
       timeStepMPO(ampo, psi, dt, args);
     }
-    if(method == 1){
+    else if(method == 1){
       //Create a std::vector (dynamically sizeable array) to hold the Trotter gates
       std::vector<BondGate> gates = makeGates(Nx, Ny, hval[n]-hF, dt, sites, LED, LEDyPBC, LED_LR);
       //Time evolve, orthogonalizing and overwriting psi when done
-      gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false,"Normalize=",false});
+      gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false,"Normalize=",true});
       psi.orthogonalize(args);
     }
+
     // calculate energy <psi(t)|H_final|psi(t)>
     energy = innerC(psi,Hf,psi).real();
     // calculate local energy density <psi(t)|H_final(x,y)|psi(t)>
@@ -292,9 +293,9 @@ void timeStepMPO(AutoMPO ampo, MPS& psi, double dt, Args args)
 
     //Fit method for MPO*MPS
     psi = applyMPO(expH1,psi,args);
-    psi.noPrime(); //need to do this after each to take care of prime levels
+    psi.noPrime().normalize(); //need to do this after each to take care of prime levels
     psi = applyMPO(expH2,psi,args);
-    psi.noPrime(); //need to do this after each to take care of prime levels
+    psi.noPrime().normalize(); //need to do this after each to take care of prime levels
 
   }
 
