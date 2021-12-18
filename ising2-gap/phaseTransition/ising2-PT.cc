@@ -46,8 +46,12 @@ int main(int argc, char *argv[])
 
     // make vector of Sz operators
     std::vector<ITensor> Sz(N);
+    std::vector<ITensor> SzPM(N);
     for(auto j : range1(N)){
         Sz[j-1] = 2.0*sites.op("Sz",j);
+    }
+    for(auto j : range1(N-1)){
+        SzPM[j-1] = 2.0*sites.op("Sz",j)*sites.op("Id",j+1) - 2.0*sites.op("Id",j)*sites.op("Sz",j+1);
     }
 
     // 2d ising model parameters
@@ -55,7 +59,8 @@ int main(int argc, char *argv[])
     sweeps.maxdim() = 20, 50, 100, 200, 400;
     sweeps.cutoff() = 1E-10;
 
-    dataFile << "hval" << " " << "energy" << " " << "mag" << " " << "mag2" << " " << "mag4" << " " << "var" << " " << "maxBondDim" << " " << std::endl;
+    dataFile << "hval" << " " << "energy" << " " << "mag" << " " << "mag2" << " " << "mag4" << " " 
+            << "magPM" << " " << "magPM2" << " " << "magPM4" << " " << "var" << " " << "maxBondDim" << " " << std::endl;
     
     //
     // loop over values of h
@@ -73,17 +78,26 @@ int main(int argc, char *argv[])
         auto var = inner(psi,H,H,psi)-en*en;
         auto maxBondDim = maxLinkDim(psi);
         double mag = 0.0, mag2 = 0.0, mag4 = 0.0;
+        double magPM = 0.0, magPM2 = 0.0, magPM4 = 0.0;
         for(auto b : range1(N)){
             psi.position(b);
             auto m = elt( dag(prime(psi(b),"Site")) * Sz[b-1] * psi(b) );
             mag += m;
             mag2 += m*m;
-            mag4 = m*m*m*m;
+            mag4 += m*m*m*m;
+            if(b<N){
+                auto ket = psi(b)*psi(b+1);
+                auto mPM = elt( dag(prime(ket,"Site")) * SzPM[b-1] * ket );
+                magPM += mPM;
+                magPM2 += mPM*mPM;
+                magPM4 += mPM*mPM*mPM*mPM;
+            }
         }
         mag /= double(N); mag2 /= double(N); mag4 /= double(N);
-        printfln("Energy = %0.3f, magnetization = %0.3f, maxLinkDim = %d, var = %0.3g", en, mag, maxBondDim, var);
+        printfln("Energy = %0.3f, FM OP = %0.3f, PM OP = %0.3f, maxLinkDim = %d, var = %0.3g", en, mag, magPM, maxBondDim, var);
 
-        dataFile << h[i] << " " << en << " " << mag << " " << mag2 << " " << mag4 << " " << var << " " << maxBondDim << " " << std::endl;
+        dataFile << h[i] << " " << en << " " << mag << " " << mag2 << " " << mag4 << " " 
+                << magPM << " " << magPM2 << " " << magPM4 << " " << var << " " << maxBondDim << " " << std::endl;
 
     }// for(i)
 
