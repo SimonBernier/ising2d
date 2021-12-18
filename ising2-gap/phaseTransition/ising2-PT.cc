@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     sweeps.maxdim() = 20, 50, 100, 200, 400;
     sweeps.cutoff() = 1E-10;
 
-    dataFile << "hval" << " " << "energy" << " " << "magnetization" << " " << "var" << " " << "maxBondDim" << " " << std::endl;
+    dataFile << "hval" << " " << "energy" << " " << "mag" << " " << "mag2" << " " << "mag4" << " " << "var" << " " << "maxBondDim" << " " << std::endl;
     
     //
     // loop over values of h
@@ -72,15 +72,18 @@ int main(int argc, char *argv[])
         auto [en,psi] = dmrg(H,randomMPS(sites),sweeps,{"Silent=",true});
         auto var = inner(psi,H,H,psi)-en*en;
         auto maxBondDim = maxLinkDim(psi);
-        double mag = 0.0;
+        double mag = 0.0, mag2 = 0.0, mag4 = 0.0;
         for(auto b : range1(N)){
             psi.position(b);
-            mag += elt( dag(prime(psi(b),"Site")) * Sz[b-1] * psi(b) );
+            auto m = elt( dag(prime(psi(b),"Site")) * Sz[b-1] * psi(b) );
+            mag += m;
+            mag2 += m*m;
+            mag4 = m*m*m*m;
         }
-        mag /= double(N);
+        mag /= double(N); mag2 /= double(N); mag4 /= double(N);
         printfln("Energy = %0.3f, magnetization = %0.3f, maxLinkDim = %d, var = %0.3g", en, mag, maxBondDim, var);
 
-        dataFile << h[i] << " " << en << " " << mag << " " << var << " " << maxBondDim << " " << std::endl;
+        dataFile << h[i] << " " << en << " " << mag << " " << mag2 << " " << mag4 << " " << var << " " << maxBondDim << " " << std::endl;
 
     }// for(i)
 
