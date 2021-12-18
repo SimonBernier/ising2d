@@ -170,13 +170,13 @@ int main(int argc, char *argv[])
   ///////// time evolve //////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////
   for(int n=1; n<=Nt; n++){
+    // update autoMPO
+    for(auto j : range1(N)){
+      ampo += -2.0*diff[n], "Sx", j;
+    }
 
     // do a time step
     if(method == 0){
-      // update autoMPO
-      for(auto j : range1(N)){
-        ampo += -2.0*diff[n], "Sx", j;
-      }
       // MPO time step, overwriting psi when done
       timeStepMPO(ampo, psi, dt, args);
     }
@@ -288,8 +288,8 @@ std::vector<double> localEnergy(int Nx, int Ny, SiteSet sites, MPS psi,
 void timeStepMPO(AutoMPO ampo, MPS& psi, double dt, Args args)
   {
     //time evolution operators
-    auto expH1 = toExpH(ampo, 0.5*dt*(1+Cplx_i)); //time evolve by 0.5*(1+i)*dt
-    auto expH2 = toExpH(ampo, 0.5*dt*(1-Cplx_i)); //time evolve by 0.5*(i-i)*dt
+    auto expH1 = toExpH(ampo, 0.5*dt*(Cplx_i+1)); //time evolve by -0.5*(i+1)*dt
+    auto expH2 = toExpH(ampo, 0.5*dt*(Cplx_i-1)); //time evolve by -0.5*(i-1)*dt
 
     //Fit method for MPO*MPS
     psi = applyMPO(expH1,psi,args);
