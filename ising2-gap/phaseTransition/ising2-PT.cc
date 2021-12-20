@@ -2,18 +2,37 @@
 
 using namespace itensor;
 
+void runPT(int, int);
+
 int main(int argc, char *argv[])
     {
-    int Nx = 64;
-    int Ny = 3;
-    if(argc > 2)
-        Ny = std::stoi(argv[2]);
-    if(argc > 1)
-        Nx = std::stoi(argv[1]);
+    std::vector<int> Ly={3, 5, 7, 9};
+    std::vector<int> Lx={16, 24, 32, 48, 64};
+    int A = Ly.size(), B = Lx.size();
+    int runs = A*B;
+    std::vector<int> Ly_list(runs), Lx_list(runs);
 
+    for(int a=0; a<A; a++){
+        for(int b=0; b<B; b++){
+            int index = a*B + b;
+            Ly_list[index] = Ly[a];
+            Lx_list[index] = Lx[b];
+        }
+    }
+
+    int runNumber = 0;
+    if(argc > 1)
+        runNumber = std::stoi(argv[1]);
+
+    runPT(Ly_list[runNumber],Lx_list[runNumber]);
+    return 0;
+    } //main
+
+void runPT(int Ly, int Lx)
+    {
     //write results to file
     char schar1[64];
-    int n1 = std::sprintf(schar1,"Nx_%d_Ny_%d_ising2dPT.dat",Nx,Ny);
+    int n1 = std::sprintf(schar1,"Lx_%d_Ly_%d_ising2dPT.dat",Lx,Ly);
     std::string s1(schar1);
     std::ofstream dataFile;
     dataFile.open(s1); // opens the file
@@ -23,14 +42,15 @@ int main(int argc, char *argv[])
     }
     dataFile << "hval" << " " << "energy" << " " << "mag" << " " << "mag2" << " " << "mag4" << " " << "var" << " " << "maxBondDim" << " " << std::endl;
 
-    auto N = Nx * Ny;
+    auto N = Lx * Ly;
     auto sites = SpinHalf(N,{"ConserveQNs=",false});
 
     auto ampo = AutoMPO(sites);
-    auto lattice = squareLattice(Nx, Ny, {"YPeriodic = ", true});
+    auto lattice = squareLattice(Lx, Ly, {"YPeriodic = ", true});
 
     // create vectors of h
-    std::vector<double> h = {2.5, 2.6, 2.7, 2.8, 2.84, 2.88, 2.9, 3.0, 3.1};
+    //std::vector<double> h = {2.5, 2.6, 2.7, 2.8, 2.82, 2.84, 2.86, 2.88, 2.89, 2.9, 3.0, 3.1};
+    std::vector<double> h = {2.3, 2.4, 2.5, 2.6, 2.62, 2.64, 2.66, 2.68, 2.7, 2.8};
     int iter = h.size();
     std::vector<double> diff(iter,0.0);
     for(int i=1; i<iter; i++){
@@ -52,8 +72,8 @@ int main(int argc, char *argv[])
     }
 
     // 2d ising model parameters
-    auto sweeps = Sweeps(5);
-    sweeps.maxdim() = 20, 50, 100, 200, 400;
+    auto sweeps = Sweeps(10);
+    sweeps.maxdim() = 20, 50, 200, 400, 800;
     sweeps.cutoff() = 1E-10;
 
     //
@@ -88,5 +108,5 @@ int main(int argc, char *argv[])
 
     dataFile.close();
 
-    return 0;
-}// main
+    return;
+}// runPT
