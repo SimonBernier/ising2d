@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     auto lattice = squareLattice(Nx, Ny, {"YPeriodic = ", true});
 
     // create vectors of h
-    std::vector<double> h = {2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2};
+    std::vector<double> h = {2.5, 2.6, 2.7, 2.8, 2.84, 2.88, 2.9, 3.0, 3.1};
     int iter = h.size();
     std::vector<double> diff(iter,0.0);
     for(int i=1; i<iter; i++){
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     }
 
     // 2d ising model parameters
-    auto sweeps = Sweeps(10);
+    auto sweeps = Sweeps(5);
     sweeps.maxdim() = 20, 50, 100, 200, 400;
     sweeps.cutoff() = 1E-10;
 
