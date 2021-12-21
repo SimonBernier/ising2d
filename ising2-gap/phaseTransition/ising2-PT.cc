@@ -6,7 +6,7 @@ void runPT(int, int);
 
 int main(int argc, char *argv[])
     {
-    std::vector<int> Ly={3, 5, 7, 9};
+    std::vector<int> Ly={5, 7, 9};
     std::vector<int> Lx={16, 24, 32, 48, 64};
     int A = Ly.size(), B = Lx.size();
     int runs = A*B;
@@ -49,8 +49,8 @@ void runPT(int Ly, int Lx)
     auto lattice = squareLattice(Lx, Ly, {"YPeriodic = ", true});
 
     // create vectors of h
-    //std::vector<double> h = {2.5, 2.6, 2.7, 2.8, 2.82, 2.84, 2.86, 2.88, 2.89, 2.9, 3.0, 3.1};
-    std::vector<double> h = {2.3, 2.4, 2.5, 2.6, 2.62, 2.64, 2.66, 2.68, 2.7, 2.8};
+    std::vector<double> h = {2.5, 2.6, 2.7, 2.8, 2.82, 2.84, 2.86, 2.88, 2.89, 2.9, 3.0, 3.1};
+    //std::vector<double> h = {2.3, 2.4, 2.5, 2.6, 2.62, 2.64, 2.66, 2.68, 2.7, 2.8}; //Ly=3
     int iter = h.size();
     std::vector<double> diff(iter,0.0);
     for(int i=1; i<iter; i++){
