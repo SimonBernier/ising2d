@@ -17,8 +17,8 @@ void updateGates(int, int, double, double, SiteSet, std::vector<BondGate>&, std:
 
 int main(int argc, char *argv[])
   {
-  int Nx = 16;
-  int Ny = 4;
+  int Ly = 4;
+  int Lx = 16;
   float h = 4.0;
   int Nt = 20;
   float dt = 0.1;
@@ -36,16 +36,16 @@ int main(int argc, char *argv[])
   if(argc > 3)
     h = std::stof(argv[3]);
   if(argc > 2)
-    Ny = std::stoi(argv[2]);
+    Lx = std::stoi(argv[2]);
   if(argc > 1)
-    Nx = std::stoi(argv[1]);
+    Ly = std::stoi(argv[1]);
 
   // write results to file
   char schar[64];
   if(method == 0){
-    int n1 = std::sprintf(schar,"Nx_%d_Ny_%d_h_%0.3g_tau_%0.3g_mpo_uniLin.dat",Nx,Ny,h,tau); 
+    int n1 = std::sprintf(schar,"Ly_%d_Lx_%d_h_%0.3g_tau_%0.3g_dt_%0.3g_mpo.dat",Ly,Lx,h,tau,dt); 
   } else if(method == 1){
-    int n1 = std::sprintf(schar,"Nx_%d_Ny_%d_h_%0.3g_tau_%0.3g_tebd_uniLin.dat",Nx,Ny,h,tau);
+    int n1 = std::sprintf(schar,"Ly_%d_Lx_%d_h_%0.3g_tau_%0.3g_dt_%0.3g_tebd.dat",Ly,Lx,h,tau,dt);
   } else{
     printfln("Not a valid method");
     return 0;
@@ -60,11 +60,11 @@ int main(int argc, char *argv[])
   //make header
   enerfile << "tval" << " " << "energy" << " " << "MaxDim" << " " << "localEnergy" << " " << std::endl;
 
-  auto N = Nx * Ny;
-  auto sites = SpinHalf(N,{"ConserveQNs=",false});
+  auto L = Ly * Lx;
+  auto sites = SpinHalf(L,{"ConserveQNs=",false});
 
   auto ampo = AutoMPO(sites);
-  auto lattice = squareLattice(Nx, Ny, {"YPeriodic = ", true});
+  auto lattice = squareLattice(Lx, Ly, {"YPeriodic = ", true});
 
   // autompo hamiltonian
   for(auto j : lattice){
@@ -72,14 +72,14 @@ int main(int argc, char *argv[])
   }
   //final Hamiltonian
   double hF = 2.6; //final field (gapless ground state)
-  for(auto j : range1(N)){
+  for(auto j : range1(L)){
     ampo += -2.0*hF, "Sx", j;
   }
   auto Hf = toMPO(ampo);
 
   //initial state
   auto state = InitState(sites); 
-  for(auto j : range1(N)){
+  for(auto j : range1(L)){
       state.set(j, (j % 2 == 1 ? "Up" : "Dn"));
   }
 
@@ -89,31 +89,31 @@ int main(int argc, char *argv[])
   sweeps.cutoff() = 1E-10;
 
   // calculate initial local energy density
-  std::vector<double> LocalEnergy(N,0.0); // local energy density vector
+  std::vector<double> LocalEnergy(L,0.0); // local energy density vector
   
   //make 2D vector of ITensor for local energy operators
   //long-range interactions have the same structure as nearest-neighbour when we use swap gates
-  std::vector<std::vector<ITensor>> LED(Nx, std::vector<ITensor>(Ny-1));
-  std::vector<std::vector<ITensor>> LED_LR(Nx-1, std::vector<ITensor>(Ny));
-  std::vector<ITensor> LEDyPBC(Nx);
+  std::vector<std::vector<ITensor>> LED(Lx, std::vector<ITensor>(Ly-1));
+  std::vector<std::vector<ITensor>> LED_LR(Lx-1, std::vector<ITensor>(Ly));
+  std::vector<ITensor> LEDyPBC(Lx);
   // make local energy tensors
-  for(int i=1; i<=Nx; i++){
-    for(int j=1; j<=Ny; j++){
-      int index = (i-1)*Ny+j;
+  for(int i=1; i<=Lx; i++){
+    for(int j=1; j<=Ly; j++){
+      int index = (i-1)*Ly+j;
       //MPS long-range
-      if(i<Nx && j==1){
-        for(int m = 0; m<Ny; m++){
+      if(i<Lx && j==1){
+        for(int m = 0; m<Ly; m++){
           LED_LR[i-1][m] = -4.0*sites.op("Sz",index+2*m)*sites.op("Sz",index+2*m+1);
         }
       }
       //y-periodic boundary equations
-      if(j==Ny){
-        // site index-Ny+1 is moved to site index-1 with swap gates
+      if(j==Ly){
+        // site index-Ly+1 is moved to site index-1 with swap gates
         LEDyPBC[i-1] = -4.0*sites.op("Sz",index-1)*sites.op("Sz",index);
         LEDyPBC[i-1] += -2.0*hF*sites.op("Id",index-1)*sites.op("Sx",index);
       }
       // MPS nearest-neighbour
-      if(j<Ny){
+      if(j<Ly){
         LED[i-1][j-1] = -4.0*sites.op("Sz",index)*sites.op("Sz",index+1);
         LED[i-1][j-1] += -2.0*hF*sites.op("Sx",index)*sites.op("Id",index+1);
       }
@@ -126,16 +126,16 @@ int main(int argc, char *argv[])
   // calculate ground state of final H
   auto [finalEnergy, psiF] = dmrg(Hf,MPS(state),sweeps,{"Silent=",true});
   // calculate local energy
-  LocalEnergy = localEnergy(Nx, Ny, sites, psiF, LED, LEDyPBC, LED_LR);
+  LocalEnergy = localEnergy(Lx, Ly, sites, psiF, LED, LEDyPBC, LED_LR);
   // store to file
   enerfile << 0.0 << " " << finalEnergy << " " << maxLinkDim(psiF) << " ";
-  for(int j = 0; j<N; j++){ //save local energy values
+  for(int j = 0; j<L; j++){ //save local energy values
   enerfile << LocalEnergy[j] << " ";
   }
   enerfile << std::endl;
 
   // revert to H at t=0 (gapped ground state)
-  for(auto j : range1(N)){
+  for(auto j : range1(L)){
     ampo += -2.0*(h-hF), "Sx", j;
   }
 
@@ -143,10 +143,10 @@ int main(int argc, char *argv[])
   auto [energy,psi] = dmrg(toMPO(ampo),MPS(state),sweeps,{"Silent=",true});
   energy = inner(psi,Hf,psi); //energy <psi(0)|H_final|psi(0)>
   // calculate local energy density
-  LocalEnergy = localEnergy(Nx, Ny, sites, psi, LED, LEDyPBC, LED_LR);
+  LocalEnergy = localEnergy(Lx, Ly, sites, psi, LED, LEDyPBC, LED_LR);
   //store to file
   enerfile << 0.0 << " " << energy << " " << maxLinkDim(psi) << " "; //print to file
-  for(int j = 0; j<N; j++){ //save local energy values
+  for(int j = 0; j<L; j++){ //save local energy values
     enerfile << LocalEnergy[j] << " ";
   }
   enerfile << std::endl;
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
     printfln("Starting TEBD");
     args = Args("Cutoff=",1E-10,"MaxDim=",3000);
     //Create a std::vector (dynamically sizeable array) to hold the Trotter gates
-    gates = makeGates(Nx, Ny, hval[0], dt, sites, LED, LEDyPBC, LED_LR);
+    gates = makeGates(Lx, Ly, hval[0], dt, sites, LED, LEDyPBC, LED_LR);
   }
 
   ////////////////////////////////////////////////////////////////////////////
@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
     // do a time step
     if(method == 0){
       // update autoMPO
-      for(auto j : range1(N)){
+      for(auto j : range1(L)){
         ampo += -2.0*diff[n], "Sx", j;
       }
       // MPO time step, overwriting psi when done
@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
     }
     else if(method == 1){
       //Create a std::vector (dynamically sizeable array) to hold the Trotter gates
-      updateGates(Nx, Ny, hval[n]-hF, dt, sites, gates, LED, LEDyPBC, LED_LR);
+      updateGates(Lx, Ly, hval[n]-hF, dt, sites, gates, LED, LEDyPBC, LED_LR);
       //Time evolve, orthogonalizing and overwriting psi when done
       gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false,"Normalize=",true});
       psi.orthogonalize(args);
@@ -204,12 +204,12 @@ int main(int argc, char *argv[])
     // calculate energy <psi(t)|H_final|psi(t)>
     energy = innerC(psi,Hf,psi).real();
     // calculate local energy density <psi(t)|H_final(x,y)|psi(t)>
-    LocalEnergy = localEnergy(Nx, Ny, sites, psi, LED, LEDyPBC, LED_LR);
+    LocalEnergy = localEnergy(Lx, Ly, sites, psi, LED, LEDyPBC, LED_LR);
 
     //write to file
     tval += dt; //update time vector
     enerfile << tval << " " << energy << " " << maxLinkDim(psi) << " ";
-    for(int j = 0; j<N; j++){ //save local energy values
+    for(int j = 0; j<L; j++){ //save local energy values
       enerfile << LocalEnergy[j] << " ";
     }
     enerfile << std::endl;
@@ -224,19 +224,19 @@ int main(int argc, char *argv[])
   }
 
 // calculates local energy for 2D MPS using gates
-std::vector<double> localEnergy(int Nx, int Ny, SiteSet sites, MPS psi,
+std::vector<double> localEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
                                 std::vector<std::vector<ITensor>> LED, 
                                 std::vector<ITensor> LEDyPBC,
                                 std::vector<std::vector<ITensor>> LED_LR)
   {  
   std::vector<double> LocalEnergy(length(psi),0.0);
-  for(int i=1; i<=Nx; i++){
-    for(int j=1; j<=Ny; j++){ 
-      int index = (i-1)*Ny + j; //this order to make orthogonality center easier to compute
+  for(int i=1; i<=Lx; i++){
+    for(int j=1; j<=Ly; j++){ 
+      int index = (i-1)*Ly + j; //this order to make orthogonality center easier to compute
       ITensor ket;
       if(j==1){ //y-periodic boundary equations with swap gates
         psi.position(index);
-        for(int n=0; n<Ny-2; n++){
+        for(int n=0; n<Ly-2; n++){
           int b = index+n;//define gate bond
           auto g = BondGate(sites,b,b+1);
           auto AA = psi(b)*psi(b+1)*g.gate(); //contract over bond b
@@ -245,11 +245,11 @@ std::vector<double> localEnergy(int Nx, int Ny, SiteSet sites, MPS psi,
           psi.position(g.i2()); //orthogonality center moves to the right
         }
         
-        ket = psi(index+Ny-2)*psi(index+Ny-1);
-        LocalEnergy[index+Ny-2] += eltC( dag(prime(ket,"Site")) * LEDyPBC[i-1] * ket).real();
+        ket = psi(index+Ly-2)*psi(index+Ly-1);
+        LocalEnergy[index+Ly-2] += eltC( dag(prime(ket,"Site")) * LEDyPBC[i-1] * ket).real();
 
         //restore the state to the original MPS
-        for(int n=Ny-2; n>0; n--){
+        for(int n=Ly-2; n>0; n--){
           int b = index+n;
           auto g = BondGate(sites,b-1,b);
           auto AA = psi(b-1)*psi(b)*g.gate(); //contract over bond b
@@ -260,18 +260,18 @@ std::vector<double> localEnergy(int Nx, int Ny, SiteSet sites, MPS psi,
       }// y-periodic
 
       //original nearest-neighbour code
-      if(j<Ny){ 
+      if(j<Ly){ 
         psi.position(index);
         ket = psi(index)*psi(index+1);
         LocalEnergy[index-1] += eltC(dag(prime(ket,"Site")) * LED[i-1][j-1] * ket).real();
       } //nearest-neighbour
 
-      //smart ordering of gates for sites i*Ny+1 to i*Ny+(Ny-1) with sites (i+1)*Ny+1 to (i+1)*Ny+(Ny-1)
-      if(i<Nx && j==1){  
-        // bring index+Ny to position index+1
-        for(int m=0; m<=Ny-2; m++){
-          psi.position(index+Ny+m);
-          for(int n=Ny; n>1+m; n--){
+      //smart ordering of gates for sites i*Ly+1 to i*Ly+(Ly-1) with sites (i+1)*Ly+1 to (i+1)*Ly+(Ly-1)
+      if(i<Lx && j==1){  
+        // bring index+Ly to position index+1
+        for(int m=0; m<=Ly-2; m++){
+          psi.position(index+Ly+m);
+          for(int n=Ly; n>1+m; n--){
           int b = index + n + m;
           auto g = BondGate(sites,b-1,b);
           auto AA = psi(b-1)*psi(b)*g.gate(); //contract over bond b
@@ -281,16 +281,16 @@ std::vector<double> localEnergy(int Nx, int Ny, SiteSet sites, MPS psi,
           }
         }
         
-        for(int m = 0; m<Ny; m++){
+        for(int m = 0; m<Ly; m++){
           psi.position(index+2*m);
           ket = psi(index+2*m)*psi(index+2*m+1);
           LocalEnergy[index-1+m] += eltC( dag(prime(ket,"Site")) * LED_LR[i-1][m] * ket).real();
         }
 
-        // bring index+1 back to position index+Ny
-        for(int m=Ny-2; m>=0; m--){
+        // bring index+1 back to position index+Ly
+        for(int m=Ly-2; m>=0; m--){
           psi.position(index+1+2*m);
-          for(int n=1+m; n<Ny; n++){
+          for(int n=1+m; n<Ly; n++){
             int b = index + n + m;
             auto g = BondGate(sites,b,b+1);
             auto AA = psi(b)*psi(b+1)*g.gate(); //contract over bond b
@@ -316,7 +316,7 @@ void timeStepMPO(AutoMPO ampo, MPS& psi, double dt, Args args)
 
     //Fit method for MPO*MPS
     psi = applyMPO(expH1,psi,args);
-    psi.noPrime().normalize(); //need to do this after each to take care of prime levels
+    psi.noPrime(); //need to do this after each to take care of prime levels
     psi = applyMPO(expH2,psi,args);
     psi.noPrime().normalize(); //need to do this after each to take care of prime levels
 
@@ -324,30 +324,30 @@ void timeStepMPO(AutoMPO ampo, MPS& psi, double dt, Args args)
 
 // second order Trotter breakup of time step dt
 // returns a vector of gates to pass to function gateTEvol
-std::vector<BondGate> makeGates(int Nx, int Ny, double hDiff, double dt, SiteSet sites, 
+std::vector<BondGate> makeGates(int Lx, int Ly, double hDiff, double dt, SiteSet sites, 
                                 std::vector<std::vector<ITensor>> LED,
                                 std::vector<ITensor> LEDyPBC,
                                 std::vector<std::vector<ITensor>> LED_LR)
   {
   std::vector<BondGate> gates; 
   //Create the gates exp(-i*tstep/2*hterm)
-  for(int i=1; i<=Nx; i++){
-    for(int j=1; j<=Ny; j++){ 
-      int index = (i-1)*Ny + j; //MPS site index
+  for(int i=1; i<=Lx; i++){
+    for(int j=1; j<=Ly; j++){ 
+      int index = (i-1)*Ly + j; //MPS site index
 
       if(j==1){ //y-periodic boundary equations with swap gates
-        for(int n=0; n<Ny-2; n++){ //swap from index-Ny+1 to index-1
+        for(int n=0; n<Ly-2; n++){ //swap from index-Ly+1 to index-1
           int b = index+n;
           auto swapGate = BondGate(sites,b,b+1);
           gates.push_back(swapGate);
         }
         auto hterm = LEDyPBC[i-1];
-        hterm += -2.0*hDiff*op(sites,"Id",index+Ny-2)*op(sites,"Sx",index+Ny-1);
-        auto g = BondGate(sites,index+Ny-2,index+Ny-1,BondGate::tReal,dt/2.,hterm);
+        hterm += -2.0*hDiff*op(sites,"Id",index+Ly-2)*op(sites,"Sx",index+Ly-1);
+        auto g = BondGate(sites,index+Ly-2,index+Ly-1,BondGate::tReal,dt/2.,hterm);
         gates.push_back(g);
 
         //restore the state to the original MPS
-        for(int n=Ny-2; n>0; n--){
+        for(int n=Ly-2; n>0; n--){
           int b = index+n;
           auto swapGate = BondGate(sites,b-1,b);
           gates.push_back(swapGate);
@@ -355,7 +355,7 @@ std::vector<BondGate> makeGates(int Nx, int Ny, double hDiff, double dt, SiteSet
       }// y-periodic
 
         //original nearest-neighbour code
-      if(j<Ny){
+      if(j<Ly){
         auto hterm = LED[i-1][j-1];
         hterm += -2.0*hDiff*op(sites,"Sx",index)*op(sites,"Id",index+1);
         auto g = BondGate(sites,index,index+1,BondGate::tReal,dt/2.,hterm);
@@ -363,24 +363,24 @@ std::vector<BondGate> makeGates(int Nx, int Ny, double hDiff, double dt, SiteSet
       } //nearest-neighbour
 
       // long-range interaction
-      if(i<Nx && j==1){ // bring index+Ny to position index+1
-        for(int m=0; m<=Ny-2; m++){
-          for(int n=Ny; n>1+m; n--){
+      if(i<Lx && j==1){ // bring index+Ly to position index+1
+        for(int m=0; m<=Ly-2; m++){
+          for(int n=Ly; n>1+m; n--){
             int b = index + n + m;
             auto swapGate = BondGate(sites,b-1,b);
             gates.push_back(swapGate);
           }
         }
 
-        for(int m = 0; m<Ny; m++){
+        for(int m = 0; m<Ly; m++){
           auto hterm = LED_LR[i-1][m];
           auto g = BondGate(sites,index+2*m,index+2*m+1,BondGate::tReal,dt/2.,hterm);
           gates.push_back(g);
         }
 
-        // bring index+1 back to position index+Ny
-        for(int m=Ny-2; m>=0; m--){
-          for(int n=1+m; n<Ny; n++){
+        // bring index+1 back to position index+Ly
+        for(int m=Ly-2; m>=0; m--){
+          for(int n=1+m; n<Ly; n++){
             int b = index + n + m;
             auto swapGate = BondGate(sites,b,b+1);
             gates.push_back(swapGate);
@@ -391,29 +391,29 @@ std::vector<BondGate> makeGates(int Nx, int Ny, double hDiff, double dt, SiteSet
   }// for i
 
   //Create the gates exp(-i*tstep/2*hterm) in reverse order 
-  for(int i=Nx; i>=1; i--){
-    for(int j=Ny; j>=1; j--){ 
-      int index = (i-1)*Ny + j; //MPS site index
+  for(int i=Lx; i>=1; i--){
+    for(int j=Ly; j>=1; j--){ 
+      int index = (i-1)*Ly + j; //MPS site index
 
       // long-range interaction
-      if(i<Nx && j==1){ // bring index+Ny to position index+1
-        for(int m=0; m<=Ny-2; m++){
-          for(int n=Ny; n>1+m; n--){
+      if(i<Lx && j==1){ // bring index+Ly to position index+1
+        for(int m=0; m<=Ly-2; m++){
+          for(int n=Ly; n>1+m; n--){
             int b = index + n + m;
             auto swapGate = BondGate(sites,b-1,b);
             gates.push_back(swapGate);
           }
         }
         
-        for(int m = Ny-1; m>=0; m--){
+        for(int m = Ly-1; m>=0; m--){
           auto hterm = LED_LR[i-1][m];
           auto g = BondGate(sites,index+2*m,index+2*m+1,BondGate::tReal,dt/2.,hterm);
           gates.push_back(g);
         }
 
-        // bring index+1 back to position index+Ny
-        for(int m=Ny-2; m>=0; m--){
-          for(int n=1+m; n<Ny; n++){
+        // bring index+1 back to position index+Ly
+        for(int m=Ly-2; m>=0; m--){
+          for(int n=1+m; n<Ly; n++){
             int b = index + n + m;
             auto swapGate = BondGate(sites,b,b+1);
             gates.push_back(swapGate);
@@ -422,7 +422,7 @@ std::vector<BondGate> makeGates(int Nx, int Ny, double hDiff, double dt, SiteSet
       }//long-range interaction
 
       //original nearest-neighbour code
-      if(j<Ny){
+      if(j<Ly){
         auto hterm = LED[i-1][j-1];
         hterm += -2.0*hDiff*op(sites,"Sx",index)*op(sites,"Id",index+1);
         auto g = BondGate(sites,index,index+1,BondGate::tReal,dt/2.,hterm);
@@ -431,18 +431,18 @@ std::vector<BondGate> makeGates(int Nx, int Ny, double hDiff, double dt, SiteSet
 
       //y-periodic boundary equations with swap gates
       if(j==1){
-        for(int n=0; n<Ny-2; n++){ //swap from index-Ny+1 to index-1
+        for(int n=0; n<Ly-2; n++){ //swap from index-Ly+1 to index-1
           int b = index+n;
           auto swapGate = BondGate(sites,b,b+1);
           gates.push_back(swapGate);
         }
         auto hterm = LEDyPBC[i-1];
-        hterm += -2.0*hDiff*op(sites,"Id",index+Ny-2)*op(sites,"Sx",index+Ny-1);
-        auto g = BondGate(sites,index+Ny-2,index+Ny-1,BondGate::tReal,dt/2.,hterm);
+        hterm += -2.0*hDiff*op(sites,"Id",index+Ly-2)*op(sites,"Sx",index+Ly-1);
+        auto g = BondGate(sites,index+Ly-2,index+Ly-1,BondGate::tReal,dt/2.,hterm);
         gates.push_back(g);
 
         //restore the state to the original MPS
-        for(int n=Ny-2; n>0; n--){
+        for(int n=Ly-2; n>0; n--){
           int b = index+n;
           auto swapGate = BondGate(sites,b-1,b);
           gates.push_back(swapGate);
@@ -456,27 +456,27 @@ std::vector<BondGate> makeGates(int Nx, int Ny, double hDiff, double dt, SiteSet
 }// makeGates
 
 //update time dependent parts of the gates
-void updateGates(int Nx, int Ny, double hDiff, double dt, SiteSet sites, std::vector<BondGate>& gates, 
+void updateGates(int Lx, int Ly, double hDiff, double dt, SiteSet sites, std::vector<BondGate>& gates, 
                   std::vector<std::vector<ITensor>> LED, std::vector<ITensor> LEDyPBC, std::vector<std::vector<ITensor>> LED_LR)
   {
   int indG = 0; //location of time dependent parts of gates
   //Create the gates exp(-i*tstep/2*hterm)
-  for(int i=1; i<=Nx; i++){
-    for(int j=1; j<=Ny; j++){ 
-      int index = (i-1)*Ny + j; //MPS site index
+  for(int i=1; i<=Lx; i++){
+    for(int j=1; j<=Ly; j++){ 
+      int index = (i-1)*Ly + j; //MPS site index
 
       if(j==1){ //y-periodic boundary equations with swap gates
-        indG += Ny-2; //swap gates
+        indG += Ly-2; //swap gates
         auto hterm = LEDyPBC[i-1];
-        hterm += -2.0*hDiff*op(sites,"Id",index+Ny-2)*op(sites,"Sx",index+Ny-1);
-        auto g = BondGate(sites,index+Ny-2,index+Ny-1,BondGate::tReal,dt/2.,hterm);
+        hterm += -2.0*hDiff*op(sites,"Id",index+Ly-2)*op(sites,"Sx",index+Ly-1);
+        auto g = BondGate(sites,index+Ly-2,index+Ly-1,BondGate::tReal,dt/2.,hterm);
         gates[indG] = g;
         indG++; //t-dep gate
-        indG += Ny-2; //swapgates
+        indG += Ly-2; //swapgates
       }// y-periodic
 
       //original nearest-neighbour code
-      if(j<Ny){
+      if(j<Ly){
         auto hterm = LED[i-1][j-1];
         hterm += -2.0*hDiff*op(sites,"Sx",index)*op(sites,"Id",index+1);
         auto g = BondGate(sites,index,index+1,BondGate::tReal,dt/2.,hterm);
@@ -485,38 +485,38 @@ void updateGates(int Nx, int Ny, double hDiff, double dt, SiteSet sites, std::ve
       } //nearest-neighbour
 
       // long-range interaction
-      if(i<Nx && j==1){ // bring index+Ny to position index+1
-        indG += Ny*(Ny-1)/2; //swap gates
-        for(int m = 0; m<Ny; m++){
+      if(i<Lx && j==1){ // bring index+Ly to position index+1
+        indG += Ly*(Ly-1)/2; //swap gates
+        for(int m = 0; m<Ly; m++){
           auto hterm = LED_LR[i-1][m];
           auto g = BondGate(sites,index+2*m,index+2*m+1,BondGate::tReal,dt/2.,hterm);
           gates[indG] = g;
           indG++;
         }
-        indG += Ny*(Ny-1)/2; //swap gates
+        indG += Ly*(Ly-1)/2; //swap gates
       }//long-range interaction
     }// for j
   }// for i
 
   //Create the gates exp(-i*tstep/2*hterm) in reverse order 
-  for(int i=Nx; i>=1; i--){
-    for(int j=Ny; j>=1; j--){ 
-      int index = (i-1)*Ny + j; //MPS site index
+  for(int i=Lx; i>=1; i--){
+    for(int j=Ly; j>=1; j--){ 
+      int index = (i-1)*Ly + j; //MPS site index
 
       // long-range interaction
-      if(i<Nx && j==1){ // bring index+Ny to position index+1
-        indG += Ny*(Ny-1)/2; //swap gates       
-        for(int m = Ny-1; m>=0; m--){
+      if(i<Lx && j==1){ // bring index+Ly to position index+1
+        indG += Ly*(Ly-1)/2; //swap gates       
+        for(int m = Ly-1; m>=0; m--){
           auto hterm = LED_LR[i-1][m];
           auto g = BondGate(sites,index+2*m,index+2*m+1,BondGate::tReal,dt/2.,hterm);
           gates[indG] = g;
           indG++;
         }
-        indG += Ny*(Ny-1)/2; //swap gates
+        indG += Ly*(Ly-1)/2; //swap gates
       }//long-range interaction
 
       //original nearest-neighbour code
-      if(j<Ny){
+      if(j<Ly){
         auto hterm = LED[i-1][j-1];
         hterm += -2.0*hDiff*op(sites,"Sx",index)*op(sites,"Id",index+1);
         auto g = BondGate(sites,index,index+1,BondGate::tReal,dt/2.,hterm);
@@ -526,13 +526,13 @@ void updateGates(int Nx, int Ny, double hDiff, double dt, SiteSet sites, std::ve
 
       //y-periodic boundary equations with swap gates
       if(j==1){
-        indG += Ny-2;
+        indG += Ly-2;
         auto hterm = LEDyPBC[i-1];
-        hterm += -2.0*hDiff*op(sites,"Id",index+Ny-2)*op(sites,"Sx",index+Ny-1);
-        auto g = BondGate(sites,index+Ny-2,index+Ny-1,BondGate::tReal,dt/2.,hterm);
+        hterm += -2.0*hDiff*op(sites,"Id",index+Ly-2)*op(sites,"Sx",index+Ly-1);
+        auto g = BondGate(sites,index+Ly-2,index+Ly-1,BondGate::tReal,dt/2.,hterm);
         gates[indG] = g;
         indG++;
-        indG += Ny-2;
+        indG += Ly-2;
       }// y-periodic
     }// for j
   }// for i
