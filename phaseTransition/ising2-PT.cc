@@ -6,7 +6,7 @@ void runPT(int, int);
 
 int main(int argc, char *argv[])
     {
-    std::vector<int> Ly={5, 7, 9};
+    std::vector<int> Ly={3, 5, 7, 9};
     std::vector<int> Lx={16, 24, 32, 48, 64};
     int A = Ly.size(), B = Lx.size();
     int runs = A*B;
@@ -32,7 +32,7 @@ void runPT(int Ly, int Lx)
     {
     //write results to file
     char schar1[64];
-    int n1 = std::sprintf(schar1,"Lx_%d_Ly_%d_ising2dPT.dat",Lx,Ly);
+    int n1 = std::sprintf(schar1,"Ly_%d_Lx_%d_ising2dPT.dat",Ly,Lx);
     std::string s1(schar1);
     std::ofstream dataFile;
     dataFile.open(s1); // opens the file
@@ -40,7 +40,8 @@ void runPT(int Ly, int Lx)
         std::cerr << "Error: file could not be opened" << std::endl;
         exit(1);
     }
-    dataFile << "hval" << " " << "energy" << " " << "mag" << " " << "mag2" << " " << "mag4" << " " << "var" << " " << "maxBondDim" << " " << std::endl;
+    dataFile << "hval" << " " << "energy" << " " << "mag" << " " << "mag2" << " " << "mag4" << " " 
+                << "var" << " " << "maxBondDim" << " " << std::endl;
 
     auto N = Lx * Ly;
     auto sites = SpinHalf(N,{"ConserveQNs=",false});
@@ -49,8 +50,24 @@ void runPT(int Ly, int Lx)
     auto lattice = squareLattice(Lx, Ly, {"YPeriodic = ", true});
 
     // create vectors of h
-    std::vector<double> h = {2.5, 2.6, 2.7, 2.8, 2.82, 2.84, 2.86, 2.88, 2.89, 2.9, 3.0, 3.1};
-    //std::vector<double> h = {2.3, 2.4, 2.5, 2.6, 2.62, 2.64, 2.66, 2.68, 2.7, 2.8}; //Ly=3
+    std::vector<double> h;
+    if(Ly==3){
+        h = {2.6, 2.62, 2.64, 2.65, 2.66, 2.665, 2.67, 2.675, 2.68, 2.685, 2.69, 2.695, 2.7, 2.8, 2.9}; //Ly=3
+    }
+    else if(Ly==5){
+        h = {2.8, 2.84, 2.85, 2.86, 2.865, 2.87, 2.875, 2.88, 2.885, 2.89, 2.895, 2.9, 3.0, 3.1}; //Ly=5
+    }
+    else if(Ly==7){
+        h = {2.9, 2.91, 2.92, 2.93, 2.94, 2.95, 2.96, 2.965, 2.97, 2.975, 2.98, 3.0, 3.1}; //Ly=7
+    }
+    else if(Ly==9){
+        h = {2.9, 2.92, 2.94, 2.96, 2.965, 2.97, 2.975, 2.98, 2.985, 2.99, 2.995, 3.0, 3.1}; //Ly=9
+    }
+    else{
+        println("Ly is studied only up to 9 sites");
+        exit(1);
+    }
+
     int iter = h.size();
     std::vector<double> diff(iter,0.0);
     for(int i=1; i<iter; i++){
