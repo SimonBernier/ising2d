@@ -55,7 +55,7 @@ void runPT(int Ly, int Lx, double h, double dh)
 
 
     auto N = Lx * Ly;
-    auto sites = SpinHalf(N,{"ConserveQNs=",false});
+    auto sites = SpinHalf(N,{"ConserveSz=",false});
 
     auto ampo = AutoMPO(sites);
     auto lattice = squareLattice(Lx, Ly, {"YPeriodic = ", true});
@@ -84,6 +84,7 @@ void runPT(int Ly, int Lx, double h, double dh)
     //
     auto H = toMPO(ampo);
     auto [en0,psi0] = dmrg(H,randomMPS(sites),sweeps,{"Silent=",true});
+    PrintData(totalQN(psi0));
     auto var = inner(psi0,H,H,psi0)-en0*en0;
     auto maxBondDim = maxLinkDim(psi0);
     double M0 = 0.0;
