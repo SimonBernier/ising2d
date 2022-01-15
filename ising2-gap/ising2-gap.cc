@@ -35,7 +35,7 @@ void runPT(int Ly, int AR)
     
     //write results to file
     char schar1[64];
-    int n1 = std::sprintf(schar1,"Ly_%d_Lx_%d_ising2dGap.dat",Ly,Lx);
+    int n1 = std::sprintf(schar1,"Ly_%d_Lx_%d_ising2dGap_PBC.dat",Ly,Lx);
     std::string s1(schar1);
     std::ofstream dataFile;
     dataFile.open(s1); // opens the file
@@ -64,6 +64,9 @@ void runPT(int Ly, int AR)
     // autompo hamiltonian
     for(auto j : lattice){
         ampo += -4.0, "Sz", j.s1, "Sz", j.s2;
+    }
+    for(auto j : range1(Ly)){
+        ampo += -4.0, "Sz", j, "Sz", N-Ly+j;
     }
     for(auto j : range1(N)){
         ampo += -2.0*h[0], "Sx", j;
