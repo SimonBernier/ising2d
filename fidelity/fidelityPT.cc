@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
     {
     std::vector<int> Ly={3, 5, 7, 9};
     std::vector<int> Lx={8, 16, 24, 32, 40, 48, 56, 64};
-    std::vector<double> h = {2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2};
+    std::vector<double> h = {2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2};
     std::vector<double> dh = {0.05};
     int A = Ly.size(), B = Lx.size(), C = h.size(), D = dh.size();
     int runs = A*B*C*D;
