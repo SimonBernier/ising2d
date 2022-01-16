@@ -117,7 +117,7 @@ void runPT(int Ly, int Lx)
             mag4 += m*m*m*m;
         }
         mag /= double(N); mag2 /= double(N); mag4 /= double(N);
-        printfln("Energy = %0.3f, FM OP = %0.3f, maxLinkDim = %d, var = %0.3g", en, mag, maxBondDim, var);
+        printfln("Energy = %0.3f, FM OP = %0.3g, maxLinkDim = %d, var = %0.3g", en, mag, maxBondDim, var);
 
         dataFile << h[i] << " " << en << " " << mag << " " << mag2 << " " << mag4 << " " << var << " " << maxBondDim << " " << std::endl;
 
