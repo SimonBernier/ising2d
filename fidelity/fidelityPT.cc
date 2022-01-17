@@ -208,7 +208,7 @@ void runPT(int Ly, int Lx, double h, double dh)
     dataFile << F04 << " " << F14 << " ";
 
     //
-    // in the ferromagnetic regime, calculate third h-dh state to find the gap
+    // in the ferromagnetic regime, calculate third h+dh state to find the gap
     //
     if(true){
         wfs.push_back(psi4);
