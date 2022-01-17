@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
     std::vector<int> Ly={3, 5, 7, 9};
     std::vector<int> Lx={8, 16, 24, 32, 40, 48, 56, 64};
     std::vector<double> h = {2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2};
-    std::vector<double> dh = {0.025};
+    std::vector<double> dh = {0.025, 0.01};
     int A = Ly.size(), B = Lx.size(), C = h.size(), D = dh.size();
     int runs = A*B*C*D;
     std::vector<int> Ly_list(runs), Lx_list(runs);
@@ -104,7 +104,6 @@ void runPT(int Ly, int Lx, double h, double dh)
     }
     M0 /= double(N);
     auto p0 = inner(psi0,P,psi0);
-    auto sgnp0 = (p0 > 0) - (p0 < 0);
     println("\nfirst h-dh state");
     printfln("Energy = %0.3f, M = %0.3f, parity = %0.3f, maxLinkDim = %d, var = %0.3g", en0, M0, p0, maxBondDim, var);
 
@@ -134,7 +133,7 @@ void runPT(int Ly, int Lx, double h, double dh)
     //
     // third h-dh state. Calculate in the ferromagnetic regime to find the gap
     //
-    if(p0!=1.0){
+    if(true){
         wfs.push_back(psi1);
         auto [en2,psi2] = dmrg(H,wfs,randomMPS(sites),sweeps,{"Silent=",true,"Weight=",20.0});
         var = inner(psi2,H,H,psi2)-en2*en2;
@@ -152,9 +151,6 @@ void runPT(int Ly, int Lx, double h, double dh)
 
         dataFile << en2 << " " << M2 << " " << p2 << " " << var << " " << maxBondDim << " ";
         
-    }
-    else{
-        dataFile << "nan" << " " << "nan" << " " << "nan" << " " << "nan" << " " << "nan" << " ";
     }
 
     //
@@ -177,10 +173,7 @@ void runPT(int Ly, int Lx, double h, double dh)
     M3 /= double(N);
     auto p3 = inner(psi3,P,psi3);
     auto F03 = abs(inner(psi3,psi0));
-    auto F13 = 0.0;
-    if(p0!=1.0){
-        F13 = abs(inner(psi3,psi1));
-    }
+    auto F13 = abs(inner(psi3,psi1));
     println("\nfirst h+dh state");
     printfln("Energy = %0.3f, M = %0.3f, parity = %0.3f, maxLinkDim = %d, var = %0.3g", en3, M3, p3, maxBondDim, var);
     printfln("Fidelity F03 = %0.5f, Fidelity F13 = %0.5f", F03, F13);
@@ -204,14 +197,9 @@ void runPT(int Ly, int Lx, double h, double dh)
     }
     M4 /= double(N);
     auto p4 = inner(psi4,P,psi4);
-    auto F04 = 0.0;
-    auto F14 = 0.0;
-    if(p0!=1.0){ //h-dh in FM regime
-        F04 = abs(inner(psi4,psi0));
-        if(p3!=1.0){ //h+dh in FM regime 
-            F14 = abs(inner(psi4,psi1));
-        }
-    }
+    auto F04 = abs(inner(psi4,psi0));
+    auto F14 = abs(inner(psi4,psi1));
+
     println("\nsecond h+dh state");
     printfln("Energy = %0.3f, M = %0.3f, parity = %0.3f, maxLinkDim = %d, var = %0.3g", en4, M4, p4, maxBondDim, var);
     printfln("Fidelity F04 = %0.5f, Fidelity F14 = %0.5f", F04, F14);
@@ -222,7 +210,7 @@ void runPT(int Ly, int Lx, double h, double dh)
     //
     // in the ferromagnetic regime, calculate third h-dh state to find the gap
     //
-    if(p3!=1.0){
+    if(true){
         wfs.push_back(psi4);
         auto [en5,psi5] = dmrg(H,wfs,randomMPS(sites),sweeps,{"Silent=",true,"Weight=",20.0});
         var = inner(psi5,H,H,psi5)-en5*en5;
@@ -240,9 +228,6 @@ void runPT(int Ly, int Lx, double h, double dh)
 
         dataFile << en5 << " " << M5 << " " << p5 << " " << var << " " << maxBondDim << " ";
         
-    }
-    else{
-        dataFile << "nan" << " " << "nan" << " " << "nan" << " " << "nan" << " " << "nan" << " ";
     }
 
     dataFile.close();
