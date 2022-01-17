@@ -132,9 +132,9 @@ void runPT(int Ly, int Lx, double h, double dh)
     dataFile << en1 << " " << M1 << " " << p1 << " " << var << " " << maxBondDim << " ";
 
     //
-    // in the ferromagnetic regime, calculate third h-dh state to find the gap
+    // third h-dh state. Calculate in the ferromagnetic regime to find the gap
     //
-    if(p0<0.99){
+    if(p0!=1.0){
         wfs.push_back(psi1);
         auto [en2,psi2] = dmrg(H,wfs,randomMPS(sites),sweeps,{"Silent=",true,"Weight=",20.0});
         var = inner(psi2,H,H,psi2)-en2*en2;
@@ -178,7 +178,7 @@ void runPT(int Ly, int Lx, double h, double dh)
     auto p3 = inner(psi3,P,psi3);
     auto F03 = abs(inner(psi3,psi0));
     auto F13 = 0.0;
-    if(p0<0.99){
+    if(p0!=1.0){
         F13 = abs(inner(psi3,psi1));
     }
     println("\nfirst h+dh state");
@@ -206,9 +206,9 @@ void runPT(int Ly, int Lx, double h, double dh)
     auto p4 = inner(psi4,P,psi4);
     auto F04 = 0.0;
     auto F14 = 0.0;
-    if(p0<0.99){ //h-dh in FM regime
+    if(p0!=1.0){ //h-dh in FM regime
         F04 = abs(inner(psi4,psi0));
-        if(p3<0.99){ //h+dh in FM regime 
+        if(p3!=1.0){ //h+dh in FM regime 
             F14 = abs(inner(psi4,psi1));
         }
     }
@@ -222,7 +222,7 @@ void runPT(int Ly, int Lx, double h, double dh)
     //
     // in the ferromagnetic regime, calculate third h-dh state to find the gap
     //
-    if(p3<0.99){
+    if(p3!=1.0){
         wfs.push_back(psi4);
         auto [en5,psi5] = dmrg(H,wfs,randomMPS(sites),sweeps,{"Silent=",true,"Weight=",20.0});
         var = inner(psi5,H,H,psi5)-en5*en5;
