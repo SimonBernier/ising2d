@@ -7,10 +7,11 @@ void runPT(int, int, double, double);
 int main(int argc, char *argv[])
     {
     std::vector<int> Ly={3, 5, 7, 9};
-    std::vector<int> Lx={8, 16, 24, 32, 40, 48, 56, 64};
-    std::vector<double> h = {2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2};
+    std::vector<int> Lx={16, 24, 32, 40, 48, 56, 64};
     std::vector<double> dh = {0.025, 0.01};
-    int A = Ly.size(), B = Lx.size(), C = h.size(), D = dh.size();
+    std::vector<double> h = {2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2};
+    
+    int A = Ly.size(), B = Lx.size(), C = dh.size(), D = h.size();
     int runs = A*B*C*D;
     std::vector<int> Ly_list(runs), Lx_list(runs);
     std::vector<double> h_list(runs), dh_list(runs);
@@ -22,8 +23,8 @@ int main(int argc, char *argv[])
                 int index = a*B*C*D + b*C*D + c*D + d;
                 Ly_list[index] = Ly[a];
                 Lx_list[index] = Lx[b];
-                h_list[index]  = h[c];
-                dh_list[index] = dh[d];
+                dh_list[index] = dh[c];
+                h_list[index]  =  h[d];
                 }
             }
         }

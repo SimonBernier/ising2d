@@ -6,7 +6,7 @@ runNumber=0
 
 for num in {0..12}
 do
-let "runNumber = $(( set * 13 + num))"  
+let "runNumber = $(( set * 26 + 13 + num))"  
 echo " "
 echo "$str $runNumber"
 
