@@ -2,8 +2,6 @@
 
 using namespace itensor;
 
-void runPT(int, int, double, double);
-
 int main(int argc, char *argv[])
     {
     
