@@ -11,6 +11,7 @@ int main(int argc, char *argv[])
     
     int Ly, Lx;
     double dh, h;
+
     std::ifstream parameter_file ("parameter_list.txt");
     std::string parameter;
     int temp = 0;
@@ -28,6 +29,8 @@ int main(int argc, char *argv[])
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
         h = std::stod(parameter);
     }
+    parameter_file.close();
+    
     printfln("Ly = %d, Lx = %d, dh = %0.4f, h = %0.3f", Ly, Lx, dh, h);
 
     //write results to file
