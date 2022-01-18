@@ -6,40 +6,32 @@ void runPT(int, int, double, double);
 
 int main(int argc, char *argv[])
     {
-    std::vector<int> Ly={3, 5, 7, 9};
-    std::vector<int> Lx={16, 24, 32, 40, 48, 56, 64};
-    std::vector<double> dh = {0.025, 0.01};
-    std::vector<double> h = {2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2};
     
-    int A = Ly.size(), B = Lx.size(), C = dh.size(), D = h.size();
-    int runs = A*B*C*D;
-    std::vector<int> Ly_list(runs), Lx_list(runs);
-    std::vector<double> h_list(runs), dh_list(runs);
-
-    for(int a=0; a<A; a++){
-        for(int b=0; b<B; b++){
-            for(int c=0; c<C; c++){
-                for(int d=0; d<D; d++){
-                int index = a*B*C*D + b*C*D + c*D + d;
-                Ly_list[index] = Ly[a];
-                Lx_list[index] = Lx[b];
-                dh_list[index] = dh[c];
-                h_list[index]  =  h[d];
-                }
-            }
-        }
-    }
-
     int runNumber = 0;
     if(argc > 1)
         runNumber = std::stoi(argv[1]);
+    
+    int Ly, Lx;
+    double dh, h;
+    std::ifstream parameter_file ("parameter_list.txt");
+    std::string parameter;
+    int temp = 0;
+    if ( parameter_file.is_open() ) { // always check whether the file is open
+        while(temp<=runNumber){ //skip the appropriate number of lines
+            std::getline(parameter_file, parameter);
+            temp += 1;
+        } 
+        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
+        Ly = std::stoi(parameter);
+        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
+        Lx = std::stoi(parameter);
+        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
+        dh = std::stod(parameter);
+        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
+        h = std::stod(parameter);
+    }
+    printfln("Ly = %d, Lx = %d, dh = %0.4f, h = %0.3f", Ly, Lx, dh, h);
 
-    runPT(Ly_list[runNumber],Lx_list[runNumber],h_list[runNumber],dh_list[runNumber]);
-    return 0;
-    } //main
-
-void runPT(int Ly, int Lx, double h, double dh)
-    {
     //write results to file
     char schar1[64];
     int n1 = std::sprintf(schar1,"Ly_%d_Lx_%d_h_%0.3f_dh_%0.4f_2dTFI_fidelity.dat",Ly,Lx,h,dh);
@@ -233,5 +225,5 @@ void runPT(int Ly, int Lx, double h, double dh)
 
     dataFile.close();
 
-    return;
+    return 0;
 }// runPT
