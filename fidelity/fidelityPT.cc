@@ -75,9 +75,10 @@ int main(int argc, char *argv[])
     }
 
     // 2d ising model parameters
-    auto sweeps = Sweeps(10);
-    sweeps.maxdim() = 20, 50, 100, 256, 512;
+    auto sweeps = Sweeps(15);
+    sweeps.maxdim() = 10, 20, 100, 100, 200, 200, 512;
     sweeps.cutoff() = 1E-10;
+    sweeps.noise() = 1E-7,1E-8,0.0;
 
     //
     //solve for ground state of h-dh
