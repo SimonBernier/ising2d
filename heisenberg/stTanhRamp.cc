@@ -60,7 +60,7 @@ int main(int argc, char *argv[]){
         std::cerr << "Error: file could not be opened" << std::endl;
         exit(1);
     }
-    enerfile << "time" << " " << "energy" << " " << "maxBondDim" << " " << "localEnergy" << " " << std::endl;
+    enerfile << "time" << " " << "energy" << " " << "entanglEntropy" << " " << "maxBondDim" << " " << "localEnergy" << " " << std::endl;
     
     auto sites = SpinHalf(N);
     auto state = InitState(sites);
@@ -99,6 +99,14 @@ int main(int argc, char *argv[]){
 
     //calculate target ground state
     auto [energyF,psiF] = dmrg(Hfinal,initState,sweeps,{"Silent=",true});
+    //calculate entanglement
+    psiF.position(N/2);
+    auto [U,D,V] = svd(psiF(N/2));
+    double S = 0.0;
+    for(int i=0; i<D.size(); i++){
+        auto wi = D[i]*D[i];
+        S += -wi*log(wi);
+    }
     //calculate local energy <psiF|Hf(x)|psiF>
     for (int b = 1; b < N; b++){
         psiF.position(b);
@@ -106,7 +114,7 @@ int main(int argc, char *argv[]){
         localEnergy[b-1] = elt( dag(prime(ket,"Site")) * LED[b-1] * ket);
     }
     //store target ground state properties
-    enerfile << 0.0 << " " << energyF << " " << maxLinkDim(psiF) << " ";
+    enerfile << 0.0 << " " << energyF << " " << S << " " << maxLinkDim(psiF) << " ";
     for (int j = 0; j < N-1; j++){
         enerfile << localEnergy[j] << " ";
     }
@@ -121,19 +129,26 @@ int main(int argc, char *argv[]){
     // Find Initial Ground State
     auto [energy,psi] = dmrg(toMPO(ampo),initState,sweeps,{"Silent=",true});
     energy = inner(psi, Hfinal, psi);
-
+    //calculate entanglement
+    psi.position(N/2);
+    [U,D,V] = svd(psi(N/2));
+    S = 0.0;
+    for(int i=0; i<D.size(); i++){
+        auto wi = D[i]*D[i];
+        S += -wi*log(wi);
+    }
     //calculate local energy <psi|Hf(x)|psi>
     for (int b = 1; b < N; b++){
         psi.position(b);
         auto ket = psi(b)*psi(b+1);
         localEnergy[b-1] = elt( dag(prime(ket,"Site")) * LED[b-1] * ket);
     }
-
-    enerfile << 0.0 << " " << energy << " " << maxLinkDim(psi) << " ";
+    enerfile << 0.0 << " " << energy << " " << S << " " << maxLinkDim(psi) << " ";
     for (int j = 0; j < N-1; j++){
         enerfile << localEnergy[j] << " ";
     }
     enerfile << std::endl;
+
 
     // time evolution parameters. Get time accuracy of 1E-4
     if(method == 1){ //2nd order TEBD
@@ -180,6 +195,15 @@ int main(int argc, char *argv[]){
         // calculate energy <psi|Hf|psi>
         auto energy = innerC(psi, Hfinal, psi).real();
 
+        //calculate entanglement
+        psi.position(N/2);
+        [U,D,V] = svd(psi(N/2));
+        S = 0.0;
+        for(int i=0; i<D.size(); i++){
+            auto wi = D[i]*D[i];
+            S += -wi*log(wi);
+        }
+
         //calculate local energy <psi|Hf(x)|psi>
         for (int b = 1; b < N; b++){
             psi.position(b);
@@ -187,13 +211,13 @@ int main(int argc, char *argv[]){
             localEnergy[b-1] = eltC( dag(prime(ket,"Site")) * LED[b-1] * ket ).real();
         }
 
-        enerfile << tval << " " << energy << " " << maxLinkDim(psi) << " ";
+        enerfile << tval << " " << energy << " " << S << " " << maxLinkDim(psi) << " ";
         for (int j = 0; j < N-1; j++){
             enerfile << localEnergy[j] << " ";
         }
         enerfile << std::endl;
 
-        printfln("t = %0.2f, energy = %0.3f, maxDim = %d", tval, energy, maxLinkDim(psi));
+        printfln("t = %0.2f, energy = %0.3f, entanglement entropy = %0.3f, maxDim = %d", tval, energy, S, maxLinkDim(psi));
     }
     
     std::cout<< std::endl << " END PROGRAM. TIME TAKEN :";
