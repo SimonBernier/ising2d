@@ -62,7 +62,7 @@ int main(int argc, char *argv[]){
         std::cerr << "Error: file could not be opened" << std::endl;
         exit(1);
     }
-    enerfile << "time" << " " << "energy" << " " << "SvN" << " " << "maxBondDim" << " " << "localEnergy" << " " << std::endl;
+    enerfile << "time" << " " << "energy" << " " << "SvN" << " " << "bondDim" << " " << "localEnergy" << " " << std::endl;
     
     auto sites = SpinHalf(N);
     auto state = InitState(sites);
@@ -116,7 +116,11 @@ int main(int argc, char *argv[]){
         auto ket = psi(b)*psi(b+1);
         localEnergy[b-1] = elt( dag(prime(ket,"Site")) * LED[b-1] * ket);
     }
-    enerfile << 0.0 << " " << energy << " " << SvN << " " << maxLinkDim(psi) << " ";
+    enerfile << 0.0 << " " << energy << " " << SvN << " ";
+    IndexSet bonds = linkInds(psi); //get bond dimensions
+    for (int j=0; j<N-1; j++){
+        enerfile << dim(bonds[j]) << " ";
+    }
     for (int j = 0; j < N-1; j++){
         enerfile << localEnergy[j] << " ";
     }
@@ -179,7 +183,11 @@ int main(int argc, char *argv[]){
             localEnergy[b-1] = eltC( dag(prime(ket,"Site")) * LED[b-1] * ket ).real();
         }
 
-        enerfile << tval << " " << energy << " " << SvN << " " << maxLinkDim(psi) << " ";
+        enerfile << tval << " " << energy << " " << SvN << " ";
+        IndexSet bonds = linkInds(psi); //get bond dimensions
+        for (int j = 0; j < N-1; j++){
+            enerfile << dim(bonds[j]) << " ";
+        }
         for (int j = 0; j < N-1; j++){
             enerfile << localEnergy[j] << " ";
         }
