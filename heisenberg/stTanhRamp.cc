@@ -18,7 +18,7 @@ int main(int argc, char *argv[]){
     
     int method = 2, N; // We assume N is even and N/2 is even.
     double v, h, quenchtau, dt;
-    double tanhshift = 2.0;
+    double tanhshift = 1.0;
 
     std::ifstream parameter_file ("parameter_list.txt");
     std::string parameter;
@@ -68,9 +68,9 @@ int main(int argc, char *argv[]){
     auto state = InitState(sites);
     for(int i = 1; i <= N; i++){
         if(i%2 == 0)
-            state.set(i,"Up");
-        else
             state.set(i,"Dn");
+        else
+            state.set(i,"Up");
     }
     auto initState = MPS(state);
     PrintData(totalQN(initState));
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]){
     std::vector<double> localEnergy(N-1);
     std::vector<ITensor> LED(N-1);
     for (int b = 1; b < N; b++){
-        LED[b-1] =  0.5*sites.op("S+",b)*sites.op("S-",b+1);        
+        LED[b-1] =  0.5*sites.op("S+",b)*sites.op("S-",b+1);
         LED[b-1] += 0.5*sites.op("S-",b)*sites.op("S+",b+1);
         LED[b-1] += 1.0*sites.op("Sz",b)*sites.op("Sz",b+1);
     }
@@ -149,7 +149,7 @@ int main(int argc, char *argv[]){
         printfln("Starting TEBD4, dt = %0.2f", dt);
     }
     Real tval = 0.0;
-    double finalTime = 1.0*double(N/2 - 1)/v + 2.0*quenchtau*tanhshift + 1.0;
+    double finalTime = double(N)/2.0/v + 2.0*quenchtau*tanhshift + 2.0*tanhshift;
     int nt = int(finalTime/dt)+1;
     auto args = Args("Cutoff=",1E-10,"MaxDim=",512);
     
@@ -217,19 +217,19 @@ std::vector<double> hvector(int N, double tval, double h, double v, double quenc
     std::vector<double> hvals(N);
     for (int b = 1; b <= N/2; b++){
         if (b%2 == 0){
-            hvals[b-1] = h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - tval/quenchtau + tanhshift));
+            hvals[b-1] = h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
         }
         else{
-            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - tval/quenchtau + tanhshift));
+            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
         }
     }
         
     for (int b = N/2+1; b <= N; b++){
         if (b%2 == 0){
-            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - tval/quenchtau + tanhshift));
+            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
         }
         else{
-            hvals[b-1] = h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - tval/quenchtau + tanhshift));
+            hvals[b-1] = h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
         }
     }
     return hvals;
