@@ -99,23 +99,6 @@ int main(int argc, char *argv[]){
         LED[b-1] += 1.0*sites.op("Sz",b)*sites.op("Sz",b+1);
     }
 
-    //calculate target ground state
-    auto [energyF,psiF] = dmrg(Hfinal,initState,sweeps,{"Silent=",true});
-    //calculate entanglement
-    auto SvN = vonNeumannS(psiF, N/2);
-    //calculate local energy <psiF|Hf(x)|psiF>
-    for (int b = 1; b < N; b++){
-        psiF.position(b);
-        auto ket = psiF(b)*psiF(b+1);
-        localEnergy[b-1] = elt( dag(prime(ket,"Site")) * LED[b-1] * ket);
-    }
-    //store target ground state properties
-    enerfile << 0.0 << " " << energyF << " " << SvN << " " << maxLinkDim(psiF) << " ";
-    for (int j = 0; j < N-1; j++){
-        enerfile << localEnergy[j] << " ";
-    }
-    enerfile << std::endl;
-
     //magnetic field vector
     std::vector<double> hvals = hvector(N, 0.0, h, v, quenchtau, tanhshift);
     for(int b=1; b<=N; b++){
@@ -126,7 +109,7 @@ int main(int argc, char *argv[]){
     auto [energy,psi] = dmrg(toMPO(ampo),initState,sweeps,{"Silent=",true});
     energy = inner(psi, Hfinal, psi);
     //calculate entanglement
-    SvN = vonNeumannS(psi, N/2);
+    auto SvN = vonNeumannS(psi, N/2);
     //calculate local energy <psi|Hf(x)|psi>
     for (int b = 1; b < N; b++){
         psi.position(b);
