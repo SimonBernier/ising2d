@@ -30,6 +30,8 @@ int main(int argc, char *argv[])
   if(argc > 1)
     Ly = std::stoi(argv[1]);
 
+  printfln("Ly = %d, Lx = %d, h = %0.2f, Nt = %d, dt = %0.3f",Ly,Lx,h,Nt,dt);
+
   // write results to file
   char schar[64];
   if(method == 0){
