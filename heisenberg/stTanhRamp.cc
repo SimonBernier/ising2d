@@ -217,7 +217,7 @@ std::vector<double> hvector(int N, double tval, double h, double v, double quenc
     std::vector<double> hvals(N);
     for (int b = 1; b <= N/2; b++){
         if (b%2 == 0){
-            hvals[b-1] = h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
+            hvals[b-1] = +h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
         }
         else{
             hvals[b-1] = -h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
@@ -226,10 +226,10 @@ std::vector<double> hvector(int N, double tval, double h, double v, double quenc
         
     for (int b = N/2+1; b <= N; b++){
         if (b%2 == 0){
-            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
+            hvals[b-1] = +h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
         }
         else{
-            hvals[b-1] = h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
+            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
         }
     }
     return hvals;
