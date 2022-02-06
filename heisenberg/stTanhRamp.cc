@@ -20,7 +20,10 @@ int main(int argc, char *argv[]){
     double v, h, quenchtau, dt;
     double tanhshift = 1.0;
 
-    std::ifstream parameter_file ("parameter_list.txt");
+    char schar1[64];
+    int n1 = std::sprintf(schar1, "parameters_run%d.txt",runNumber);
+    std::string s1(schar1);
+    std::ifstream parameter_file(s1);
     std::string parameter;
     int temp = 0;
     if ( parameter_file.is_open() ) { // always check whether the file is open
@@ -44,20 +47,20 @@ int main(int argc, char *argv[]){
     printfln("N = %d, v = %0.1f, h = %0.1f, quench tau = %0.2f", N, v, h, quenchtau);
 
     // We will write into a file with the time-evolved energy density at all times.
-    char schar[64];
+    char schar2[64];
     if(method==1){
-        int n1 = std::sprintf(schar,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_HeisenbergSTtanh_TEBD2.dat",N,v,h,quenchtau);
+        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_HeisenbergSTtanh_TEBD2.dat",N,v,h,quenchtau);
     }
     else if(method==2){
-        int n1 = std::sprintf(schar,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_HeisenbergSTtanh_TEBD4.dat",N,v,h,quenchtau);
+        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_HeisenbergSTtanh_TEBD4.dat",N,v,h,quenchtau);
     }
     else{
         printfln("Not a valid method");
         return 0;
     }
-    std::string s1(schar);
+    std::string s2(schar2);
     std::ofstream enerfile;
-    enerfile.open(s1); // opens the file
+    enerfile.open(s2); // opens the file
     if( !enerfile ) { // file couldn't be opened
         std::cerr << "Error: file could not be opened" << std::endl;
         exit(1);

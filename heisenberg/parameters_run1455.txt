@@ -1,0 +1,2 @@
+method L v h quenchtau 
+2 80 3.2 3.0 0.40 
