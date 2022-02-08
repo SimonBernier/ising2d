@@ -25,12 +25,8 @@ int main(int argc, char *argv[]){
     std::string s1(schar1);
     std::ifstream parameter_file(s1);
     std::string parameter;
-    int temp = 0;
     if ( parameter_file.is_open() ) { // always check whether the file is open
-        while(temp<=runNumber){ //skip the appropriate number of lines
-            std::getline(parameter_file, parameter);
-            temp += 1;
-        } 
+        std::getline(parameter_file, parameter); //skip header line
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
         method = std::stoi(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
