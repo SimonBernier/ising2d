@@ -171,29 +171,31 @@ int main(int argc, char *argv[]){
         gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false});
         psi.orthogonalize(args); //orthogonalize to minimize bond dimensions
 
-        // calculate energy <psi|Hf|psi>
-        auto energy = innerC(psi, Hfinal, psi).real();
-        //calculate entanglement entropy
-        SvN = vonNeumannS(psi, N/2);
-        //calculate local energy <psi|Hf(x)|psi>
-        for (int b = 1; b < N; b++){
-            psi.position(b);
-            auto ket = psi(b)*psi(b+1);
-            localEnergy[b-1] = eltC( dag(prime(ket,"Site")) * LED[b-1] * ket ).real();
-        }
+        if( n % int(0.1/dt) == 0){
+            // calculate energy <psi|Hf|psi>
+            auto en = innerC(psi, Hfinal, psi).real();
+            //calculate entanglement entropy
+            SvN = vonNeumannS(psi, N/2);
+            //calculate local energy <psi|Hf(x)|psi>
+            for (int b = 1; b < N; b++){
+                psi.position(b);
+                auto ket = psi(b)*psi(b+1);
+                localEnergy[b-1] = eltC( dag(prime(ket,"Site")) * LED[b-1] * ket ).real();
+            }
 
-        enerfile << tval << " " << energy << " " << SvN << " ";
-        IndexSet bonds = linkInds(psi); //get bond dimensions
-        for (int j = 0; j < N-1; j++){
-            enerfile << dim(bonds[j]) << " ";
-        }
-        for (int j = 0; j < N-1; j++){
-            enerfile << localEnergy[j] << " ";
-        }
-        enerfile << std::endl;
+            enerfile << tval << " " << en << " " << SvN << " ";
+            IndexSet bonds = linkInds(psi); //get bond dimensions
+            for (int j = 0; j < N-1; j++){
+                enerfile << dim(bonds[j]) << " ";
+            }
+            for (int j = 0; j < N-1; j++){
+                enerfile << localEnergy[j] << " ";
+            }
+            enerfile << std::endl;
 
-        printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, energy, SvN, maxLinkDim(psi));
-    }
+            printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, SvN, maxLinkDim(psi));
+        }//if
+    }// for n
     
     std::cout<< std::endl << " END PROGRAM. TIME TAKEN :";
     

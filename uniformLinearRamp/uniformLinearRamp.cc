@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
       //Create a std::vector (dynamically sizeable array) to hold the Trotter gates
       updateGates(Lx, Ly, hval[n]-hF, dt, sites, gates, LED, LEDyPBC, LED_LR);
       //Time evolve, orthogonalizing and overwriting psi when done
-      gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false,"Normalize=",true});
+      gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false});
       psi.orthogonalize(args);
     }
 
