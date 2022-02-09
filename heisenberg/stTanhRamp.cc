@@ -264,10 +264,11 @@ std::vector<BondGate> makeGates(int L, std::vector<double> h, double dt, SiteSet
   
 }// makeGates
 
+//calculate entanglement
 Real vonNeumannS(MPS psi, int b){
     Real SvN = 0.;
 
-    //calculate entanglement
+    //choose orthogonality center and perform svd
     psi.position(b);
     auto l = leftLinkIndex(psi,b);
     auto s = siteIndex(psi,b);
