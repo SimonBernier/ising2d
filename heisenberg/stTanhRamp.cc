@@ -16,8 +16,8 @@ int main(int argc, char *argv[]){
     if(argc > 1)
         runNumber = std::stoi(argv[1]);
     
-    int method = 2, N; // We assume N is even and N/2 is even.
-    double v, h, quenchtau, dt;
+    int method = 2, N, maxB=512; // We assume N is even and N/2 is even.
+    double v, h, quenchtau, dt, truncE=1E-8;
     double tanhshift = 1.0;
 
     char schar1[64];
@@ -37,18 +37,25 @@ int main(int argc, char *argv[]){
         h = std::stod(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
         quenchtau = std::stod(parameter);
+        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
+        truncE = std::stod(parameter);
+        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
+        maxB = std::stod(parameter);
     }
     parameter_file.close();
     
-    printfln("N = %d, v = %0.1f, h = %0.1f, quench tau = %0.2f", N, v, h, quenchtau);
+    printfln("N = %d, v = %0.1f, h = %0.1f, tau = %0.2f, cutoff = %0.1e, max bond dim = %d", 
+                                                            N, v, h, quenchtau, truncE, maxB);
 
     // We will write into a file with the time-evolved energy density at all times.
-    char schar2[64];
+    char schar2[128];
     if(method==1){
-        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_HeisenbergSTtanh_TEBD2.dat",N,v,h,quenchtau);
+        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisenbergSTtanh_TEBD2.dat"
+                                        ,N,v,h,quenchtau,truncE,maxB);
     }
     else if(method==2){
-        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_HeisenbergSTtanh_TEBD4.dat",N,v,h,quenchtau);
+        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisenbergSTtanh_TEBD4.dat"
+                                        ,N,v,h,quenchtau,truncE,maxB);
     }
     else{
         printfln("Not a valid method");
@@ -86,8 +93,8 @@ int main(int argc, char *argv[]){
     
     //sweeps
     auto sweeps = Sweeps(5); //number of sweeps is 5
-    sweeps.maxdim() = 10,20,100,100,200; //gradually increase states kept
-    sweeps.cutoff() = 1E-10; //desired truncation error
+    sweeps.maxdim() = 10,20,100,200,maxB; //gradually increase states kept
+    sweeps.cutoff() = truncE; //desired truncation error
 
     // Create the Local Energy Density Tensors
     std::vector<double> localEnergy(N-1);
@@ -137,7 +144,7 @@ int main(int argc, char *argv[]){
     Real tval = 0.0;
     double finalTime = double(N)/2.0/v + 2.0*quenchtau*tanhshift + 2.0*tanhshift;
     int nt = int(finalTime/dt)+1;
-    auto args = Args("Cutoff=",1E-10,"MaxDim=",512);
+    auto args = Args("Cutoff=",truncE,"MaxDim=",maxB);
     
     printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, energy, SvN, maxLinkDim(psi));
 
@@ -209,19 +216,19 @@ std::vector<double> hvector(int N, double tval, double h, double v, double quenc
     std::vector<double> hvals(N);
     for (int b = 1; b <= N/2; b++){
         if (b%2 == 0){
-            hvals[b-1] = +h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
+            hvals[b-1] = +h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - tval/quenchtau + tanhshift ));
         }
         else{
-            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
+            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - tval/quenchtau + tanhshift ));
         }
     }
         
     for (int b = N/2+1; b <= N; b++){
         if (b%2 == 0){
-            hvals[b-1] = +h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
+            hvals[b-1] = +h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - tval/quenchtau + tanhshift ));
         }
         else{
-            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - (tval-tanhshift)/quenchtau ));
+            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - tval/quenchtau + tanhshift ));
         }
     }
     return hvals;
