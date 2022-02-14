@@ -10,6 +10,8 @@ std::vector<BondGate> makeGates(int, int, double, SiteSet, std::vector<std::vect
 
 int main(int argc, char *argv[])
     {
+    std::clock_t tStart = std::clock();
+
     int Ly,Lx;
     double h, lambda;
     int method = 0; //0 for MPO, 1 for TEBD2, 2 for TEBD4 
@@ -61,7 +63,7 @@ int main(int argc, char *argv[])
     }
     //make header for t=0 calculations
     dataFile << "t=0" << " " << "enPsi" << " " << "MaxDimPsi" << " " << "enPhi" << " " << "MaxDimPhi" << " " 
-            << "Sz(x,y)" << " " << "Sz(x,y)Sz(Lx/2,1,0)" << " " << std::endl;
+             << "Sz(x,y)Sz(Lx/2,1,0)" << " " << std::endl;
 
     auto L = Ly * Lx;
     auto sites = SpinHalf(L,{"ConserveQNs=",false});
@@ -167,13 +169,6 @@ int main(int argc, char *argv[])
     auto HP = H.plusEq(-lambda*P);
     auto [en_psi,psi] = dmrg(HP,randomMPS(sites),sweeps,{"Silent=",true});
 
-    //calculate <Sz(x,y)>
-    std::vector<double> aveSz(L,0.0);
-    for(auto j : range1(L)){
-      psi.position(j);
-      aveSz[j-1] = elt( dag(prime(psi(j),"Site")) * 2.0*sites.op("Sz",j) * psi(j) );
-    }
-
     // make |phi> = Sz|psi>
     int loc = (Lx/2)*Ly+1; //centered in x and on lower row in y
     psi.position(loc);
@@ -193,10 +188,7 @@ int main(int argc, char *argv[])
     printfln("\nIteration %d, time = %0.2f; phi energy = %0.f, max link dim is %d",0,0, en_phi,maxLinkDim(phi));
     // store to file
     dataFile << 0.0 << " " << en_psi << " " << maxLinkDim(psi) << " " << en_phi << " " << maxLinkDim(phi) << " ";
-    for(int j = 0; j<L; j++){ //save local energy values
-      dataFile << aveSz[j] << " ";
-    }
-    for(int j = 0; j<L; j++){ //save local energy values
+    for(int j = 0; j<L; j++){ //save local energycorrelation values
       dataFile << real(szsz[j]) << " " << imag(szsz[j]) << " ";
     }
     dataFile << std::endl;
@@ -213,14 +205,14 @@ int main(int argc, char *argv[])
     Args args;
     std::vector<BondGate> gates; //only make the gates vector if using TEBD
     if(method==0){
-      dt = 0.01;
+      dt = 0.02;
       Nt = int(ttotal/dt);
       printfln("Starting MPO based time evolution, dt = %0.2f", dt);
       args = Args("Method=","Fit","Cutoff=",1E-10,"MaxDim=",512);
     } else if(method==1){
-      dt = 0.01;
+      dt = 0.02;
       Nt = int(ttotal/dt);
-      printfln("Starting second order TEBD, dt = %0.2f");
+      printfln("Starting second order TEBD, dt = %0.2f", dt);
       args = Args("Cutoff=",1E-10,"MaxDim=",512);
       //Create a std::vector (dynamically sizeable array) to hold the Trotter gates
       gates = makeGates(Lx, Ly, dt, sites, LED, LEDyPBC, LED_LR);
@@ -262,25 +254,32 @@ int main(int argc, char *argv[])
         phi.orthogonalize(args);
       }
 
-      en_phi = innerC(phi, H, phi).real();
+      if(n % int(0.1/dt) == 0){
+        en_phi = innerC(phi, H, phi).real();
 
-      //calculate the spin-spin correlation using MPS * MPO * MPS methods
-      for(auto j : range1(L)){
-        szsz[j-1] = innerC(exp(1_i*en_psi*tval)*psi, Sz[j-1], phi);
-      }
+        //calculate the spin-spin correlation using MPS * MPO * MPS methods
+        for(auto j : range1(L)){
+          szsz[j-1] = innerC(exp(1_i*en_psi*tval)*psi, Sz[j-1], phi);
+        }
 
-      //write to file
-      dataFile << tval << " " << en_phi << " " << maxLinkDim(phi) << " ";
-      for(int j = 0; j<L; j++){ //save local energy values
-        dataFile << real(szsz[j]) << " " << imag(szsz[j]) << " ";
-      }
-      dataFile << std::endl;
+        //write to file
+        dataFile << tval << " " << en_phi << " " << maxLinkDim(phi) << " ";
+        for(int j = 0; j<L; j++){ //save local energy values
+          dataFile << real(szsz[j]) << " " << imag(szsz[j]) << " ";
+        }
+        dataFile << std::endl;
 
-      printfln("\nIteration %d, time = %0.2f; phi energy = %0.3f, max link dim is %d",n,tval,en_phi,maxLinkDim(phi));
+        printfln("\nIteration %d, time = %0.2f; phi energy = %0.3f, max link dim is %d",n,tval,en_phi,maxLinkDim(phi));
 
-    }
+      }//if n
+
+    }// for n
 
     dataFile.close();
+
+    std::cout<< std::endl << " END PROGRAM. TIME TAKEN :";
+    
+    std::printf("Time taken: %.3fs\n", (double)(std::clock() - tStart)/CLOCKS_PER_SEC);
 
     return 0;
 
