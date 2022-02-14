@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
 
     // time evolution parameters
     double tval = 0.0; //time
-    double ttotal = 10.0;
+    double ttotal = 2.0;
     Real dt; //time step
     int Nt; //number of time steps
 
