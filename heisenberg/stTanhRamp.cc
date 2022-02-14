@@ -204,10 +204,13 @@ int main(int argc, char *argv[]){
         }//if
     }// for n
     
+    enerfile.close();
+
     std::cout<< std::endl << " END PROGRAM. TIME TAKEN :";
     
     std::printf("Time taken: %.3fs\n", (double)(std::clock() - tStart)/CLOCKS_PER_SEC);
     
+
     return 0;
 }
 
