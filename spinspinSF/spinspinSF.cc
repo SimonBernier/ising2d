@@ -45,11 +45,11 @@ int main(int argc, char *argv[])
     // write results to file
     char schar2[64];
     if(method == 0){
-      int n2 = std::sprintf(schar2,"Ly_%d_Lx_%d_h_%0.3g_mpo.dat",Ly,Lx,h); 
+      int n2 = std::sprintf(schar2,"Ly_%d_Lx_%d_h_%0.2f_mpo.dat",Ly,Lx,h); 
     } else if(method == 1){
-      int n2 = std::sprintf(schar2,"Ly_%d_Lx_%d_h_%0.3g_tebd2.dat",Ly,Lx,h);
+      int n2 = std::sprintf(schar2,"Ly_%d_Lx_%d_h_%0.2f_tebd2.dat",Ly,Lx,h);
     } else if(method == 2){
-      int n2 = std::sprintf(schar2,"Ly_%d_Lx_%d_h_%0.3g_tebd4.dat",Ly,Lx,h);
+      int n2 = std::sprintf(schar2,"Ly_%d_Lx_%d_h_%0.2f_tebd4.dat",Ly,Lx,h);
     } else{
       printfln("Not a valid method");
       return 0;

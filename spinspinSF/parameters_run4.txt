@@ -1,2 +1,2 @@
 method Ly Lx h lambda
-0 3 16 2.50 2.00 
+0 3 32 2.55 2.00 
