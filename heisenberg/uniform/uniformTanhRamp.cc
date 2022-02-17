@@ -48,11 +48,11 @@ int main(int argc, char *argv[]){
     // We will write into a file with the time-evolved energy density at all times.
     char schar2[128];
     if(method==1){
-        int n2 = std::sprintf(schar2,"N_%d_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisenbergSTtanh_TEBD2.dat"
+        int n2 = std::sprintf(schar2,"N_%d_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisenbergUniTanh_TEBD2.dat"
                                         ,N,h,quenchtau,truncE,maxB);
     }
     else if(method==2){
-        int n2 = std::sprintf(schar2,"N_%d_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisenbergSTtanh_TEBD4.dat"
+        int n2 = std::sprintf(schar2,"N_%d_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisenbergUniTanh_TEBD4.dat"
                                         ,N,h,quenchtau,truncE,maxB);
     }
     else{
