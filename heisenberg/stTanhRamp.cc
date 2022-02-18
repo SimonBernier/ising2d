@@ -142,7 +142,7 @@ int main(int argc, char *argv[]){
         printfln("Starting TEBD4, dt = %0.2f", dt);
     }
     Real tval = 0.0;
-    double finalTime = double(N)/2.0/v + 2.0*quenchtau*tanhshift;
+    double finalTime = double(N)/2.0/v + 2.0*quenchtau*(1.0+tanhshift);
     int nt = int(finalTime/dt)+1;
     auto args = Args("Cutoff=",truncE,"MaxDim=",maxB);
     
