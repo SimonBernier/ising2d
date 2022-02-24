@@ -3,7 +3,7 @@
 using namespace itensor;
 
 //magnetic field vector
-std::vector<double> hvector(int, double, double, double, double, double);
+std::vector<double> hvector(int, double, double, double, double, double, double);
 //makes gates to pass to function gateTEvol
 std::vector<BondGate> makeGates(int, std::vector<double>, double, SiteSet, std::vector<ITensor>);
 //calculate Von Neumann entanglement entropy
@@ -106,7 +106,8 @@ int main(int argc, char *argv[]){
     }
 
     //magnetic field vector
-    std::vector<double> hvals = hvector(N, 0.0, h, v, quenchtau, tanhshift);
+    Real tanhshift = 2.0-T0;
+    std::vector<double> hvals = hvector(N, 0.0, h, v, T0, quenchtau, tanhshift);
     for(int b=1; b<=N; b++){
         ampo += hvals[b-1],"Sz",b;
     }
@@ -142,8 +143,7 @@ int main(int argc, char *argv[]){
         printfln("Starting TEBD4, dt = %0.2f", dt);
     }
     Real tval = 0.0;
-    Real tanhshift = 2.0-T0;
-    double finalTime = sqrt( pow(double(N/2),2.0)/v + T0^2) + tanhshift + 4.0*quenchtau;
+    double finalTime = sqrt( pow(double(N/2)/v,2.0)+ T0*T0) + tanhshift + 4.0*quenchtau;
     int nt = int(finalTime/dt)+1;
     auto args = Args("Cutoff=",truncE,"MaxDim=",maxB);
     
@@ -156,7 +156,7 @@ int main(int argc, char *argv[]){
         tval += dt;
 
         //update magnetic field vector
-        hvals = hvector(N, tval, h, v, quenchtau, tanhshift);
+        hvals = hvector(N, tval, h, v, T0, quenchtau, tanhshift);
         
         // TEBD time update
         std::vector<BondGate> gates;
@@ -218,7 +218,7 @@ std::vector<double> hvector(int N, double tval, double h, double v, double T0, d
     {
     std::vector<double> hvals(N);
     for (int b = 1; b <= N; b++){
-        double f = sqrt( pow(double(b-N/2)-0.5, 2.0) /v/v  + T0*T0) - tval + tanhshift;
+        double f = sqrt( pow( (double(b-N/2)-0.5)/v , 2.0)  + T0*T0) - tval + tanhshift;
         if (b%2 == 0){
             hvals[b-1] = +h*(0.5 + 0.5*tanh( f/quenchtau ));
         }
