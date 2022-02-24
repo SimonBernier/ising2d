@@ -1,0 +1,2 @@
+method L T0 h quenchtau truncE maxDim 
+2 32 0.0 3.0 1.00 1.0e-10 512
