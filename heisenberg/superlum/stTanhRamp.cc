@@ -53,15 +53,15 @@ int main(int argc, char *argv[]){
     char schar2[128];
     char schar3[128];
     if(method==1){
-        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperEn_TEBD2.dat"
+        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperEn_TEBD2.dat"
                                         ,N,v,h,tau,truncE,maxB);
-        int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperSSC_TEBD2.dat"
+        int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperSSC_TEBD2.dat"
                                         ,N,v,h,tau,truncE,maxB);
     }
     else if(method==2){
-        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperEn_TEBD4.dat"
+        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperEn_TEBD4.dat"
                                         ,N,v,h,tau,truncE,maxB);
-        int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperSSC_TEBD4.dat"
+        int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperSSC_TEBD4.dat"
                                         ,N,v,h,tau,truncE,maxB);
     }
     else{
@@ -352,15 +352,17 @@ double szsz(int center, int b, MPS psi, SiteSet sites){
     psi.position(b);
     if(b>center){ //bring site b next to the center from right
         for(int n=b-1; n>center; n--){
-          auto g = BondGate(sites,n,n+1);
-          auto AA = psi(n)*psi(n+1)*g.gate(); //contract over bond n
-          AA.replaceTags("Site,1","Site,0");
-          psi.svdBond(g.i1(), AA, Fromright); //svd from the right
-          psi.position(g.i1()); //move orthogonality center to the left 
+            auto g = BondGate(sites,n,n+1);
+            auto AA = psi(n)*psi(n+1)*g.gate(); //contract over bond n
+            AA.replaceTags("Site,1","Site,0");
+            psi.svdBond(g.i1(), AA, Fromright); //svd from the right
+            psi.position(g.i1()); //move orthogonality center to the left 
         }
         auto ket = psi(center)*psi(center+1);
-        auto SzSz = sites.op("Sz",center)*sites.op("Sz",center+1);
-        corr = eltC( dag(prime(ket,"Site")) * SzSz * ket).real();
+        auto SS = sites.op("Sz",center)*sites.op("Sz",center+1);
+        SS += 0.5*sites.op("S+",center)*sites.op("S-",center+1);
+        SS += 0.5*sites.op("S-",center)*sites.op("S+",center+1);
+        corr = eltC( dag(prime(ket,"Site")) * SS * ket).real();
     }
     else if(b<center){ //bring site b next to the center from left
         for(int n=b; n<center-1; n++){
@@ -371,12 +373,13 @@ double szsz(int center, int b, MPS psi, SiteSet sites){
           psi.position(g.i2()); //move orthogonality center to the right 
         }
         auto ket = psi(center-1)*psi(center);
-        auto SzSz = sites.op("Sz",center-1)*sites.op("Sz",center);
-        corr = eltC( dag(prime(ket,"Site")) * SzSz * ket).real();
+        auto SS = sites.op("Sz",center-1)*sites.op("Sz",center);
+        SS += 0.5*sites.op("S+",center-1)*sites.op("S-",center);
+        SS += 0.5*sites.op("S-",center-1)*sites.op("S+",center);
+        corr = eltC( dag(prime(ket,"Site")) * SS * ket).real();
     }
     else{
-        auto ket = psi(center);
-        corr = 0.25;
+        corr = 2.25;
     }
 
     return corr;
