@@ -17,7 +17,7 @@ int main(int argc, char *argv[]){
         runNumber = std::stoi(argv[1]);
     
     int method = 2, N, maxB=512; // We assume N is even and N/2 is even.
-    double v, h, quenchtau, dt, truncE=1E-8;
+    double v, h, tau, dt, truncE=1E-8;
     double tanhshift = 2.0;
 
     char schar1[64];
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]){
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
         h = std::stod(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
-        quenchtau = std::stod(parameter);
+        tau = std::stod(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
         truncE = std::stod(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
@@ -45,17 +45,17 @@ int main(int argc, char *argv[]){
     parameter_file.close();
     
     printfln("N = %d, v = %0.1f, h = %0.1f, tau = %0.2f, cutoff = %0.1e, max bond dim = %d", 
-                                                            N, v, h, quenchtau, truncE, maxB);
+                                                            N, v, h, tau, truncE, maxB);
 
     // We will write into a file with the time-evolved energy density at all times.
     char schar2[128];
     if(method==1){
         int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisenbergSTtanh_TEBD2.dat"
-                                        ,N,v,h,quenchtau,truncE,maxB);
+                                        ,N,v,h,tau,truncE,maxB);
     }
     else if(method==2){
         int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisenbergSTtanh_TEBD4.dat"
-                                        ,N,v,h,quenchtau,truncE,maxB);
+                                        ,N,v,h,tau,truncE,maxB);
     }
     else{
         printfln("Not a valid method");
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]){
     }
 
     //magnetic field vector
-    std::vector<double> hvals = hvector(N, 0.0, h, v, quenchtau, tanhshift);
+    std::vector<double> hvals = hvector(N, 0.0, h, v, tau, tanhshift);
     for(int b=1; b<=N; b++){
         ampo += hvals[b-1],"Sz",b;
     }
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]){
         printfln("Starting TEBD4, dt = %0.2f", dt);
     }
     Real tval = 0.0;
-    double finalTime = double(N)/2.0/v + 2.0*quenchtau*(1.0+tanhshift);
+    double finalTime = double(N)/2.0/v + 2.0*tau*(1.0+tanhshift);
     int nt = int(finalTime/dt)+1;
     auto args = Args("Cutoff=",truncE,"MaxDim=",maxB);
     
@@ -161,7 +161,7 @@ int main(int argc, char *argv[]){
         tval += dt;
 
         //update magnetic field vector
-        hvals = hvector(N, tval, h, v, quenchtau, tanhshift);
+        hvals = hvector(N, tval, h, v, tau, tanhshift);
         
         // TEBD time update
         std::vector<BondGate> gates;
@@ -219,24 +219,26 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
-std::vector<double> hvector(int N, double tval, double h, double v, double quenchtau, double tanhshift)
+std::vector<double> hvector(int N, double tval, double h, double v, double tau, double tanhshift)
     {
     std::vector<double> hvals(N);
     for (int b = 1; b <= N/2; b++){
+        double f = -(double(b-N/2)-0.5)/v - tval;
         if (b%2 == 0){
-            hvals[b-1] = +h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - tval/quenchtau + tanhshift ));
+            hvals[b-1] = +h*(0.5 + 0.5*tanh( f/tau + tanhshift ));
         }
         else{
-            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - tval/quenchtau + tanhshift ));
+            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*tau) - tval/tau + tanhshift ));
         }
     }
     
     for (int b = N/2+1; b <= N; b++){
+        double f = (double(b-N/2)-0.5)/v - tval;
         if (b%2 == 0){
-            hvals[b-1] = +h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - tval/quenchtau + tanhshift ));
+            hvals[b-1] = +h*(0.5 + 0.5*tanh( f/tau + tanhshift ));
         }
         else{
-            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - tval/quenchtau + tanhshift ));
+            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*tau) - tval/tau + tanhshift ));
         }
     }
     return hvals;
