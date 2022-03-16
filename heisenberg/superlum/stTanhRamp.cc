@@ -9,7 +9,7 @@ std::vector<BondGate> makeGates(int, std::vector<double>, double, SiteSet, std::
 //calculate Von Neumann entanglement entropy
 Real vonNeumannS(MPS, int);
 //calculate spin-spin correlator
-double SzSz(int,int,MPS,std::vector<ITensor>);
+double szsz(int,int,MPS,SiteSet);
 
 int main(int argc, char *argv[]){
     std::clock_t tStart = std::clock();
@@ -142,7 +142,7 @@ int main(int argc, char *argv[]){
     }
     //calculate spin-spin correlation
     for (int b = 1; b <= N; b++){
-        spinspincorr[b-1] = SzSz(N/2+1,b,psi,sz);
+        spinspincorr[b-1] = szsz(N/2+1,b,psi,sites);
     }
     //store variables to energy file
     enerfile << 0.0 << " " << energy << " " << SvN << " ";
@@ -328,7 +328,7 @@ Real vonNeumannS(MPS psi, int b){
 }//vonNeumannS
 
 //calculate spin-spin correlator
-double SzSz(int center, int b, MPS psi,std::vector<ITensor> SzSz){
+double szsz(int center, int b, MPS psi, SiteSet sites){
     
     double corr;
 
