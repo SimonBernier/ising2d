@@ -228,7 +228,7 @@ std::vector<double> hvector(int N, double tval, double h, double v, double tau, 
             hvals[b-1] = +h*(0.5 + 0.5*tanh( f/tau + tanhshift ));
         }
         else{
-            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*tau) - tval/tau + tanhshift ));
+            hvals[b-1] = -h*(0.5 + 0.5*tanh( f/tau + tanhshift ));
         }
     }
     
@@ -238,7 +238,7 @@ std::vector<double> hvector(int N, double tval, double h, double v, double tau, 
             hvals[b-1] = +h*(0.5 + 0.5*tanh( f/tau + tanhshift ));
         }
         else{
-            hvals[b-1] = -h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*tau) - tval/tau + tanhshift ));
+            hvals[b-1] = -h*(0.5 + 0.5*tanh( f/tau + tanhshift ));
         }
     }
     return hvals;
