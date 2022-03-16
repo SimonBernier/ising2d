@@ -8,6 +8,8 @@ std::vector<double> hvector(int, double, double, double, double, double);
 std::vector<BondGate> makeGates(int, std::vector<double>, double, SiteSet, std::vector<ITensor>);
 //calculate Von Neumann entanglement entropy
 Real vonNeumannS(MPS, int);
+//calculate spin-spin correlator
+double SzSz(int,int,MPS,std::vector<ITensor>);
 
 int main(int argc, char *argv[]){
     std::clock_t tStart = std::clock();
@@ -49,26 +51,37 @@ int main(int argc, char *argv[]){
 
     // We will write into a file with the time-evolved energy density at all times.
     char schar2[128];
+    char schar3[128];
     if(method==1){
         int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisenbergSTtanh_TEBD2.dat"
+                                        ,N,v,h,tau,truncE,maxB);
+        int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperSSC_TEBD2.dat"
                                         ,N,v,h,tau,truncE,maxB);
     }
     else if(method==2){
         int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisenbergSTtanh_TEBD4.dat"
+                                        ,N,v,h,tau,truncE,maxB);
+        int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperSSC_TEBD4.dat"
                                         ,N,v,h,tau,truncE,maxB);
     }
     else{
         printfln("Not a valid method");
         return 0;
     }
-    std::string s2(schar2);
-    std::ofstream enerfile;
+    std::string s2(schar2), s3(schar3);
+    std::ofstream enerfile, sscfile;
     enerfile.open(s2); // opens the file
     if( !enerfile ) { // file couldn't be opened
         std::cerr << "Error: file could not be opened" << std::endl;
         exit(1);
     }
+    sscfile.open(s3); // opens the file
+    if( !sscfile ) { // file couldn't be opened
+        std::cerr << "Error: file could not be opened" << std::endl;
+        exit(1);
+    }
     enerfile << "time" << " " << "energy" << " " << "SvN" << " " << "bondDim" << " " << "localEnergy" << " " << std::endl;
+    sscfile << "time" << " " << "ssc" << " " << std::endl;
     
     auto sites = SpinHalf(N);
     auto state = InitState(sites);
@@ -105,11 +118,8 @@ int main(int argc, char *argv[]){
         LED[b-1] += 1.0*sites.op("Sz",b)*sites.op("Sz",b+1);
     }
 
-    // Create the Sz spin tensors
-    std::vector<ITensor> Sz(N);
-    for (int b = 1; b < N; b++){
-        Sz[b-1] = sites.op("Sz",b);
-    }
+    // Create the SzSz correlation vector
+    std::vector<double> spinspincorr(N);
 
     //magnetic field vector
     std::vector<double> hvals = hvector(N, 0.0, h, v, tau, tanhshift);
@@ -122,14 +132,20 @@ int main(int argc, char *argv[]){
     energy = inner(psi, Hfinal, psi);
     //calculate entanglement
     auto SvN = vonNeumannS(psi, N/2);
+    //get bond dimensions
+    IndexSet bonds = linkInds(psi); 
     //calculate local energy <psi|Hf(x)|psi>
     for (int b = 1; b < N; b++){
         psi.position(b);
         auto ket = psi(b)*psi(b+1);
         localEnergy[b-1] = elt( dag(prime(ket,"Site")) * LED[b-1] * ket);
     }
+    //calculate spin-spin correlation
+    for (int b = 1; b <= N; b++){
+        spinspincorr[b-1] = SzSz(N/2+1,b,psi,sz);
+    }
+    //store variables to energy file
     enerfile << 0.0 << " " << energy << " " << SvN << " ";
-    IndexSet bonds = linkInds(psi); //get bond dimensions
     for (int j=0; j<N-1; j++){
         enerfile << dim(bonds[j]) << " ";
     }
@@ -137,6 +153,12 @@ int main(int argc, char *argv[]){
         enerfile << localEnergy[j] << " ";
     }
     enerfile << std::endl;
+    //store variables to spin spin correlation file
+    sscfile << 0.0 << " ";
+    for (int j = 0; j < N; j++){
+        sscfile << spinspincorr[j] << " ";
+    }
+    sscfile << std::endl;
 
     // time evolution parameters. Get time accuracy of 1E-4
     if(method == 1){ //2nd order TEBD
@@ -304,3 +326,43 @@ Real vonNeumannS(MPS psi, int b){
     return SvN;
 
 }//vonNeumannS
+
+//calculate spin-spin correlator
+double SzSz(int center, int b, MPS psi,std::vector<ITensor> SzSz){
+    
+    double corr;
+
+    psi.position(b);
+    if(b>center){ //bring site b next to the center from right
+        for(int n=b-1; n>center; n--){
+          auto g = BondGate(sites,n,n+1);
+          auto AA = psi(n)*psi(n+1)*g.gate(); //contract over bond n
+          AA.replaceTags("Site,1","Site,0");
+          psi.svdBond(g.i1(), AA, Fromright); //svd from the right
+          psi.position(g.i1()); //move orthogonality center to the left 
+        }
+        auto ket = psi(center)*psi(center+1);
+        auto SzSz = sites.op("Sz",center)*sites.op("Sz",center+1);
+        corr = eltC( dag(prime(ket,"Site")) * SzSz * ket).real();
+    }
+    else if(b<center){ //bring site b next to the center from left
+        for(int n=b; n<center-1; n++){
+          auto g = BondGate(sites,n,n+1);
+          auto AA = psi(n)*psi(n+1)*g.gate(); //contract over bond n
+          AA.replaceTags("Site,1","Site,0");
+          psi.svdBond(g.i1(), AA, Fromleft); //svd from the right
+          psi.position(g.i2()); //move orthogonality center to the right 
+        }
+        auto ket = psi(center-1)*psi(center);
+        auto SzSz = sites.op("Sz",center-1)*sites.op("Sz",center);
+        corr = eltC( dag(prime(ket,"Site")) * SzSz * ket).real();
+    }
+    else{
+        auto ket = psi(center);
+        auto SzSz = sites.op("Sz",center)*sites.op("Sz",center);
+        corr = eltC( dag(prime(ket,"Site")) * SzSz * ket).real();
+    }
+
+    return corr;
+
+}//Szsz
