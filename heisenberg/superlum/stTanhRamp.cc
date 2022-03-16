@@ -53,13 +53,13 @@ int main(int argc, char *argv[]){
     char schar2[128];
     char schar3[128];
     if(method==1){
-        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisenbergSTtanh_TEBD2.dat"
+        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperEn_TEBD2.dat"
                                         ,N,v,h,tau,truncE,maxB);
         int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperSSC_TEBD2.dat"
                                         ,N,v,h,tau,truncE,maxB);
     }
     else if(method==2){
-        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisenbergSTtanh_TEBD4.dat"
+        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperEn_TEBD4.dat"
                                         ,N,v,h,tau,truncE,maxB);
         int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperSSC_TEBD4.dat"
                                         ,N,v,h,tau,truncE,maxB);
@@ -144,6 +144,7 @@ int main(int argc, char *argv[]){
     for (int b = 1; b <= N; b++){
         spinspincorr[b-1] = szsz(N/2+1,b,psi,sites);
     }
+
     //store variables to energy file
     enerfile << 0.0 << " " << energy << " " << SvN << " ";
     for (int j=0; j<N-1; j++){
@@ -375,8 +376,7 @@ double szsz(int center, int b, MPS psi, SiteSet sites){
     }
     else{
         auto ket = psi(center);
-        auto SzSz = sites.op("Sz",center)*sites.op("Sz",center);
-        corr = eltC( dag(prime(ket,"Site")) * SzSz * ket).real();
+        corr = 0.25;
     }
 
     return corr;
