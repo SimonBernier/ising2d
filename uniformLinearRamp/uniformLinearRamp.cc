@@ -19,10 +19,10 @@ int main(int argc, char *argv[])
   {
   int Ly = 4;
   int Lx = 16;
-  float h = 4.0;
+  double h = 4.0;
   int Nt = 20;
-  float dt = 0.1;
-  float tau = 1.0;
+  double dt = 0.1;
+  double tau = 1.0;
   int method = 0; //0 for MPO, 1 for TEBD
 
   if(argc > 7)
