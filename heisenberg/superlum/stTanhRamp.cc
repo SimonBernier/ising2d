@@ -105,6 +105,12 @@ int main(int argc, char *argv[]){
         LED[b-1] += 1.0*sites.op("Sz",b)*sites.op("Sz",b+1);
     }
 
+    // Create the Sz spin tensors
+    std::vector<ITensor> Sz(N);
+    for (int b = 1; b < N; b++){
+        Sz[b-1] = sites.op("Sz",b);
+    }
+
     //magnetic field vector
     std::vector<double> hvals = hvector(N, 0.0, h, v, quenchtau, tanhshift);
     for(int b=1; b<=N; b++){
@@ -224,7 +230,7 @@ std::vector<double> hvector(int N, double tval, double h, double v, double quenc
             hvals[b-1] = -h*(0.5 + 0.5*tanh(double(-b+N/2)/(v*quenchtau) - tval/quenchtau + tanhshift ));
         }
     }
-        
+    
     for (int b = N/2+1; b <= N; b++){
         if (b%2 == 0){
             hvals[b-1] = +h*(0.5 + 0.5*tanh(double(b-N/2-1)/(v*quenchtau) - tval/quenchtau + tanhshift ));
