@@ -9,7 +9,7 @@ std::vector<BondGate> makeGates(int, std::vector<double>, double, SiteSet, std::
 //calculate Von Neumann entanglement entropy
 Real vonNeumannS(MPS, int);
 //calculate spin-spin correlator
-double szsz(int,int,MPS,SiteSet);
+std::tuple<double, double> spinspin(int,int,MPS,SiteSet);
 
 int main(int argc, char *argv[]){
     std::clock_t tStart = std::clock();
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]){
         exit(1);
     }
     enerfile << "time" << " " << "energy" << " " << "SvN" << " " << "bondDim" << " " << "localEnergy" << " " << std::endl;
-    sscfile << "time" << " " << "ssc" << " " << std::endl;
+    sscfile << "time" << " " << "szsz" << " " << "spsm" << " " << std::endl;
     
     auto sites = SpinHalf(N);
     auto state = InitState(sites);
@@ -118,8 +118,8 @@ int main(int argc, char *argv[]){
         LED[b-1] += 1.0*sites.op("Sz",b)*sites.op("Sz",b+1);
     }
 
-    // Create the SzSz correlation vector
-    std::vector<double> spinspincorr(N);
+    // Create the SzSz and S+S- correlation vector
+    std::vector<double> szszcorr(N), spsmcorr(N);
 
     //magnetic field vector
     std::vector<double> hvals = hvector(N, 0.0, h, v, tau, tanhshift);
@@ -142,7 +142,9 @@ int main(int argc, char *argv[]){
     }
     //calculate spin-spin correlation
     for (int b = 1; b <= N; b++){
-        spinspincorr[b-1] = szsz(N/2+1,b,psi,sites);
+        auto [szsz,spsm] = spinspin(N/2+1,b,psi,sites);
+        szszcorr[b-1] = szsz;
+        spsmcorr[b-1] = spsm;
     }
 
     //store variables to energy file
@@ -157,7 +159,10 @@ int main(int argc, char *argv[]){
     //store variables to spin spin correlation file
     sscfile << 0.0 << " ";
     for (int j = 0; j < N; j++){
-        sscfile << spinspincorr[j] << " ";
+        sscfile << szszcorr[j] << " ";
+    }
+    for (int j = 0; j < N; j++){
+        sscfile << spsmcorr[j] << " ";
     }
     sscfile << std::endl;
 
@@ -235,13 +240,18 @@ int main(int argc, char *argv[]){
         if( n % int(1.0/dt) == 0){
             //calculate spin-spin correlation
             for (int b = 1; b <= N; b++){
-                spinspincorr[b-1] = szsz(N/2+1,b,psi,sites);
+                auto [szsz,spsm] = spinspin(N/2+1,b,psi,sites);
+                szszcorr[b-1] = szsz;
+                spsmcorr[b-1] = spsm;
             }
 
             //store variables to spin spin correlation file
             sscfile << tval << " ";
             for (int j = 0; j < N; j++){
-                sscfile << spinspincorr[j] << " ";
+                sscfile << szszcorr[j] << " ";
+            }
+            for (int j = 0; j < N; j++){
+                sscfile << spsmcorr[j] << " ";
             }
             sscfile << std::endl;
 
@@ -345,9 +355,9 @@ Real vonNeumannS(MPS psi, int b){
 }//vonNeumannS
 
 //calculate spin-spin correlator
-double szsz(int center, int b, MPS psi, SiteSet sites){
+std::tuple<double, double> spinspin(int center, int b, MPS psi, SiteSet sites){
     
-    double corr;
+    double corrZ, corrPM;
 
     psi.position(b);
     if(b>center){ //bring site b next to the center from right
@@ -359,10 +369,10 @@ double szsz(int center, int b, MPS psi, SiteSet sites){
             psi.position(g.i1()); //move orthogonality center to the left 
         }
         auto ket = psi(center)*psi(center+1);
-        auto SS = sites.op("Sz",center)*sites.op("Sz",center+1);
-        SS += 0.5*sites.op("S+",center)*sites.op("S-",center+1);
-        SS += 0.5*sites.op("S-",center)*sites.op("S+",center+1);
-        corr = eltC( dag(prime(ket,"Site")) * SS * ket).real();
+        auto SzSz = sites.op("Sz",center)*sites.op("Sz",center+1);
+        auto SpSm = sites.op("S+",center+1)*sites.op("S-",center);
+        corrZ = eltC( dag(prime(ket,"Site")) * SzSz * ket).real();
+        corrPM = eltC( dag(prime(ket,"Site")) * SpSm * ket).real();
     }
     else if(b<center){ //bring site b next to the center from left
         for(int n=b; n<center-1; n++){
@@ -373,15 +383,18 @@ double szsz(int center, int b, MPS psi, SiteSet sites){
           psi.position(g.i2()); //move orthogonality center to the right 
         }
         auto ket = psi(center-1)*psi(center);
-        auto SS = sites.op("Sz",center-1)*sites.op("Sz",center);
-        SS += 0.5*sites.op("S+",center-1)*sites.op("S-",center);
-        SS += 0.5*sites.op("S-",center-1)*sites.op("S+",center);
-        corr = eltC( dag(prime(ket,"Site")) * SS * ket).real();
+        auto SzSz = sites.op("Sz",center-1)*sites.op("Sz",center);
+        auto SpSm = sites.op("S+",center-1)*sites.op("S-",center);
+        corrZ = eltC( dag(prime(ket,"Site")) * SzSz * ket).real();
+        corrPM = eltC( dag(prime(ket,"Site")) * SpSm * ket).real();
     }
     else{
-        corr = 2.25;
+        corrZ = 0.25;
+        auto ket = psi(center);
+        auto SpSm = 0.5*sites.op("Id",center) + sites.op("Sz",center);
+        corrPM = eltC( dag(prime(ket,"Site")) * SpSm * ket).real();
     }
 
-    return corr;
+    return {corrZ, corrPM};
 
 }//Szsz
