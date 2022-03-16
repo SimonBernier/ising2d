@@ -229,7 +229,23 @@ int main(int argc, char *argv[]){
             enerfile << std::endl;
 
             printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, SvN, maxLinkDim(psi));
-        }//if
+        }//if energy
+
+        if( n % int(1.0/dt) == 0){
+            //calculate spin-spin correlation
+            for (int b = 1; b <= N; b++){
+                spinspincorr[b-1] = szsz(N/2+1,b,psi,sites);
+            }
+
+            //store variables to spin spin correlation file
+            sscfile << tval << " ";
+            for (int j = 0; j < N; j++){
+                sscfile << spinspincorr[j] << " ";
+            }
+            sscfile << std::endl;
+
+        }//if spinspin
+
     }// for n
     
     enerfile.close();
