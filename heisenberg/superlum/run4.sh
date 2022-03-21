@@ -4,7 +4,7 @@ set=("$@")
 str="Starting run number"
 runNumber=0
 
-for i in $(seq 54 1 71);
+for i in $(seq 124 1 165);
 do
 let "runNumber = $(( runNumber + 1 ))"
 echo " "
