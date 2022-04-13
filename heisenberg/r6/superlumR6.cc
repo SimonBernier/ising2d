@@ -2,10 +2,12 @@
 
 using namespace itensor;
 
-const int g2 = { 0.015625 };
+const double g2 = { 0.015625 };
 
 //magnetic field vector
 std::vector<double> hvector(int, double, double, double, double, double);
+//calculates local energy density
+std::vector<double> calculateLocalEnergy(int, MPS, std::vector<ITensor>, SiteSet);
 //makes gates to pass to function gateTEvol
 std::vector<BondGate> makeGates(int, std::vector<double>, double, SiteSet, std::vector<ITensor>);
 //calculate Von Neumann entanglement entropy
@@ -129,11 +131,7 @@ int main(int argc, char *argv[]){
     //get bond dimensions
     IndexSet bonds = linkInds(psi); 
     //calculate local energy <psi|Hf(x)|psi>
-    for (int b = 1; b < N; b++){
-        psi.position(b);
-        auto ket = psi(b)*psi(b+1);
-        localEnergy[b-1] = elt( dag(prime(ket,"Site")) * LED[b-1] * ket);
-    }
+    localEnergy = calculateLocalEnergy(N, psi, LED, sites);
     //calculate spin-spin correlation
     for (int b = 1; b <= N; b++){
         auto [szsz,spsm] = spinspin(N/2+1,b,psi,sites);
@@ -193,31 +191,25 @@ int main(int argc, char *argv[]){
         // apply Trotter gates
         gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false});
         psi.orthogonalize(args); //orthogonalize to minimize bond dimensions
+        
+        // calculate energy <psi|Hf|psi>
+        auto en = innerC(psi, Hfinal, psi).real();
+        //calculate entanglement entropy
+        SvN = vonNeumannS(psi, N/2);
+        //calculate local energy <psi|Hf(x)|psi>
+        localEnergy = calculateLocalEnergy(N, psi, LED, sites);
 
-        if( n % int(0.1/dt) == 0){
-            // calculate energy <psi|Hf|psi>
-            auto en = innerC(psi, Hfinal, psi).real();
-            //calculate entanglement entropy
-            SvN = vonNeumannS(psi, N/2);
-            //calculate local energy <psi|Hf(x)|psi>
-            for (int b = 1; b < N; b++){
-                psi.position(b);
-                auto ket = psi(b)*psi(b+1);
-                localEnergy[b-1] = eltC( dag(prime(ket,"Site")) * LED[b-1] * ket ).real();
-            }
+        enerfile << tval << " " << en << " " << SvN << " ";
+        IndexSet bonds = linkInds(psi); //get bond dimensions
+        for (int j = 0; j < N-1; j++){
+            enerfile << dim(bonds[j]) << " ";
+        }
+        for (int j = 0; j < N-1; j++){
+            enerfile << localEnergy[j] << " ";
+        }
+        enerfile << std::endl;
 
-            enerfile << tval << " " << en << " " << SvN << " ";
-            IndexSet bonds = linkInds(psi); //get bond dimensions
-            for (int j = 0; j < N-1; j++){
-                enerfile << dim(bonds[j]) << " ";
-            }
-            for (int j = 0; j < N-1; j++){
-                enerfile << localEnergy[j] << " ";
-            }
-            enerfile << std::endl;
-
-            printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, SvN, maxLinkDim(psi));
-        }//if energy
+        printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, SvN, maxLinkDim(psi));
 
         if( n % int(1.0/dt) == 0){
             //calculate spin-spin correlation
@@ -275,6 +267,42 @@ std::vector<double> hvector(int N, double tval, double h, double v, double tau, 
     return hvals;
 }
 
+//calculate local energy density and return a vector of doubles
+std::vector<double> calculateLocalEnergy(int N, MPS psi, std::vector<ITensor> LED, SiteSet sites){
+
+    std::vector<double> energyVector(N-1);
+
+    for (int b = 1; b < N; b++){
+
+        psi.position(b);
+        auto ket = psi(b)*psi(b+1);
+        energyVector[b-1] = eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
+
+        if (b<N-1){
+            //switch sites for next-nearest neighbour interaction
+            psi.position(b+1);
+            auto g = BondGate(sites,b+1,b+2);
+            auto AA = psi(b+1)*psi(b+2)*g.gate(); //contract over bond b+1
+            AA.replaceTags("Site,1","Site,0");
+            psi.svdBond(g.i1(), AA, Fromright); //svd from the right
+            psi.position(g.i1()); //move orthogonality center to the left 
+
+            ket = psi(b)*psi(b+1);
+            energyVector[b-1] += g2*eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
+
+            //switch back sites
+            AA = psi(b+1)*psi(b+2)*g.gate(); //contract over bond b+1
+            AA.replaceTags("Site,1","Site,0");
+            psi.svdBond(g.i1(), AA, Fromright); //svd from the right
+            psi.position(g.i2()); //move orthogonality center to the right
+        }
+
+    }//for b
+
+    return energyVector;
+
+}//calculateLocalEnergy
+
 // second order Trotter breakup of time step dt
 // returns a vector of gates to pass to function gateTEvol
 std::vector<BondGate> makeGates(int L, std::vector<double> h, double dt, SiteSet sites, std::vector<ITensor> LED)
@@ -282,11 +310,20 @@ std::vector<BondGate> makeGates(int L, std::vector<double> h, double dt, SiteSet
     std::vector<BondGate> gates; 
     //Create the gates exp(-i*tstep/2*hterm)
     for(int i=1; i<=L; i++){
-        if(i<L){
+        if(i<L){ //nearest neighbour
             auto hterm = LED[i-1];
             hterm += h[i-1]*op(sites,"Sz",i)*op(sites,"Id",i+1);
             auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
+        }
+        if(i<L-1){ //next-nearest neighbour
+            gates.push_back( BondGate(sites, i+1, i+2) ); //swap sites
+            
+            auto hterm = LED[i-1]; //time evolve
+            auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,g2*hterm);
+            gates.push_back(g);
+
+            gates.push_back( BondGate(sites, i+1, i+2) ); //swap back
         }
         else{
             auto hterm = h[i-1]*op(sites,"Id",i-1)*op(sites,"Sz",i);
@@ -295,33 +332,33 @@ std::vector<BondGate> makeGates(int L, std::vector<double> h, double dt, SiteSet
         }
     } // for i
 
-  //Create the gates exp(-i*tstep/2*hterm) in reverse order 
-  for(int i=L; i>=1; i--){
-    if(i<L){
-        auto hterm = LED[i-1];
-        hterm += h[i-1]*op(sites,"Sz",i)*op(sites,"Id",i+1);
-        auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,hterm);
-        gates.push_back(g);
-    }
-    else{
-        auto hterm = h[i-1]*op(sites,"Id",i-1)*op(sites,"Sz",i);
-        auto g = BondGate(sites,i-1,i,BondGate::tReal,dt/2.,hterm);
-        gates.push_back(g);
-    }
-  }// for i
+    //Create the gates exp(-i*tstep/2*hterm) in reverse order 
+    for(int i=L; i>=1; i--){
+        if(i<L){
+            auto hterm = LED[i-1];
+            hterm += h[i-1]*op(sites,"Sz",i)*op(sites,"Id",i+1);
+            auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,hterm);
+            gates.push_back(g);
+        }
+        if(i<L-1){ //next-nearest neighbour
+            gates.push_back( BondGate(sites, i+1, i+2) ); //swap sites
+            
+            auto hterm = LED[i-1]; //time evolve
+            auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,g2*hterm);
+            gates.push_back(g);
+
+            gates.push_back( BondGate(sites, i+1, i+2) ); //swap back
+        }
+        else{
+            auto hterm = h[i-1]*op(sites,"Id",i-1)*op(sites,"Sz",i);
+            auto g = BondGate(sites,i-1,i,BondGate::tReal,dt/2.,hterm);
+            gates.push_back(g);
+        }
+    }// for i
 
   return gates;
   
 }// makeGates
-
-std::vector<double> calculateLocalEnergy(MPS psi, std::vector<ITensor> LED){
-    std::vector<double> energyVector(N-1);
-    for (int b = 1; b < N; b++){
-        psi.position(b);
-        auto ket = psi(b)*psi(b+1);
-        localEnergy[b-1] = elt( dag(prime(ket,"Site")) * LED[b-1] * ket);
-    }
-}
 
 //calculate entanglement
 Real vonNeumannS(MPS psi, int b){
