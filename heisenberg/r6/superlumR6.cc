@@ -2,8 +2,6 @@
 
 using namespace itensor;
 
-const double g2 = { 0.015625 };
-
 //magnetic field vector
 std::vector<double> hvector(int, double, double, double, double, double);
 //calculates local energy density
@@ -54,9 +52,9 @@ int main(int argc, char *argv[]){
     // We will write into a file with the time-evolved energy density at all times.
     char schar2[128];
     char schar3[128];
-    int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.1e_maxDim_%d_heisR3SuperEn.dat"
+    int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.0e_maxDim_%d_heisR3SuperEn.dat"
                                     ,N,v,h,tau,truncE,maxB);
-    int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.1e_maxDim_%d_heisR3SuperSSC.dat"
+    int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.0e_maxDim_%d_heisR3SuperSSC.dat"
                                     ,N,v,h,tau,truncE,maxB);
 
     std::string s2(schar2), s3(schar3);
@@ -93,6 +91,7 @@ int main(int argc, char *argv[]){
         ampo += 0.5,"S-", b, "S+", b+1;
         ampo += 1.0,"Sz", b, "Sz", b+1;
     }
+    const double g2 = 0.015625;
     for (int b = 1; b < N-1; b++){
         ampo += g2*0.5,"S+", b, "S-", b+2;
         ampo += g2*0.5,"S-", b, "S+", b+2;
@@ -269,7 +268,8 @@ std::vector<double> hvector(int N, double tval, double h, double v, double tau, 
 
 //calculate local energy density and return a vector of doubles
 std::vector<double> calculateLocalEnergy(int N, MPS psi, std::vector<ITensor> LED, SiteSet sites){
-
+    
+    const double g2 = 0.015625;
     std::vector<double> energyVector(N-1);
 
     for (int b = 1; b < N; b++){
@@ -284,8 +284,8 @@ std::vector<double> calculateLocalEnergy(int N, MPS psi, std::vector<ITensor> LE
             auto g = BondGate(sites,b+1,b+2);
             auto AA = psi(b+1)*psi(b+2)*g.gate(); //contract over bond b+1
             AA.replaceTags("Site,1","Site,0");
-            psi.svdBond(g.i1(), AA, Fromright); //svd from the right
-            psi.position(g.i1()); //move orthogonality center to the left 
+            psi.svdBond(g.i1(), AA, Fromleft); //svd from the left
+            psi.position(g.i1()); //restore orthogonality center to the left 
 
             ket = psi(b)*psi(b+1);
             energyVector[b-1] += g2*eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
@@ -293,7 +293,7 @@ std::vector<double> calculateLocalEnergy(int N, MPS psi, std::vector<ITensor> LE
             //switch back sites
             AA = psi(b+1)*psi(b+2)*g.gate(); //contract over bond b+1
             AA.replaceTags("Site,1","Site,0");
-            psi.svdBond(g.i1(), AA, Fromright); //svd from the right
+            psi.svdBond(g.i1(), AA, Fromleft); //svd from the left
             psi.position(g.i2()); //move orthogonality center to the right
         }
 
@@ -307,6 +307,8 @@ std::vector<double> calculateLocalEnergy(int N, MPS psi, std::vector<ITensor> LE
 // returns a vector of gates to pass to function gateTEvol
 std::vector<BondGate> makeGates(int L, std::vector<double> h, double dt, SiteSet sites, std::vector<ITensor> LED)
     {
+    
+    const double g2 = 0.015625;
     std::vector<BondGate> gates; 
     //Create the gates exp(-i*tstep/2*hterm)
     for(int i=1; i<=L; i++){
@@ -316,6 +318,11 @@ std::vector<BondGate> makeGates(int L, std::vector<double> h, double dt, SiteSet
             auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
         }
+        else{
+            auto hterm = h[i-1]*op(sites,"Id",i-1)*op(sites,"Sz",i);
+            auto g = BondGate(sites,i-1,i,BondGate::tReal,dt/2.,hterm);
+            gates.push_back(g);
+        }
         if(i<L-1){ //next-nearest neighbour
             gates.push_back( BondGate(sites, i+1, i+2) ); //swap sites
             
@@ -325,36 +332,31 @@ std::vector<BondGate> makeGates(int L, std::vector<double> h, double dt, SiteSet
 
             gates.push_back( BondGate(sites, i+1, i+2) ); //swap back
         }
-        else{
-            auto hterm = h[i-1]*op(sites,"Id",i-1)*op(sites,"Sz",i);
-            auto g = BondGate(sites,i-1,i,BondGate::tReal,dt/2.,hterm);
-            gates.push_back(g);
-        }
     } // for i
 
     //Create the gates exp(-i*tstep/2*hterm) in reverse order 
     for(int i=L; i>=1; i--){
+        if(i<L-1){ //next-nearest neighbour
+            gates.push_back( BondGate(sites, i+1, i+2) ); //swap sites
+            
+            auto hterm = LED[i-1]; //time evolve
+            auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,g2*hterm);
+            gates.push_back(g);
+
+            gates.push_back( BondGate(sites, i+1, i+2) ); //swap back
+        }
         if(i<L){
             auto hterm = LED[i-1];
             hterm += h[i-1]*op(sites,"Sz",i)*op(sites,"Id",i+1);
             auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
         }
-        if(i<L-1){ //next-nearest neighbour
-            gates.push_back( BondGate(sites, i+1, i+2) ); //swap sites
-            
-            auto hterm = LED[i-1]; //time evolve
-            auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,g2*hterm);
-            gates.push_back(g);
-
-            gates.push_back( BondGate(sites, i+1, i+2) ); //swap back
-        }
         else{
             auto hterm = h[i-1]*op(sites,"Id",i-1)*op(sites,"Sz",i);
             auto g = BondGate(sites,i-1,i,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
         }
-    }// for i
+    }// for i, nearest-neighbour 
 
   return gates;
   
