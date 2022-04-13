@@ -2,6 +2,8 @@
 
 using namespace itensor;
 
+const int g2 = { 0.015625 };
+
 //magnetic field vector
 std::vector<double> hvector(int, double, double, double, double, double);
 //makes gates to pass to function gateTEvol
@@ -18,8 +20,8 @@ int main(int argc, char *argv[]){
     if(argc > 1)
         runNumber = std::stoi(argv[1]);
     
-    int method = 2, N, maxB=512; // We assume N is even and N/2 is even.
-    double v, h, tau, dt, truncE=1E-8;
+    int N, maxB=512; // We assume N is even and N/2 is even.
+    double v, h, tau, dt, truncE=1E-10;
     double tanhshift = 2.0;
 
     char schar1[64];
@@ -29,8 +31,6 @@ int main(int argc, char *argv[]){
     std::string parameter;
     if ( parameter_file.is_open() ) { // always check whether the file is open
         std::getline(parameter_file, parameter); //skip header line
-        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
-        method = std::stoi(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
         N = std::stoi(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
@@ -52,22 +52,11 @@ int main(int argc, char *argv[]){
     // We will write into a file with the time-evolved energy density at all times.
     char schar2[128];
     char schar3[128];
-    if(method==1){
-        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperEn_TEBD2.dat"
-                                        ,N,v,h,tau,truncE,maxB);
-        int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperSSC_TEBD2.dat"
-                                        ,N,v,h,tau,truncE,maxB);
-    }
-    else if(method==2){
-        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperEn_TEBD4.dat"
-                                        ,N,v,h,tau,truncE,maxB);
-        int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.1e_maxDim_%d_heisSuperSSC_TEBD4.dat"
-                                        ,N,v,h,tau,truncE,maxB);
-    }
-    else{
-        printfln("Not a valid method");
-        return 0;
-    }
+    int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.1e_maxDim_%d_heisR3SuperEn.dat"
+                                    ,N,v,h,tau,truncE,maxB);
+    int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.1e_maxDim_%d_heisR3SuperSSC.dat"
+                                    ,N,v,h,tau,truncE,maxB);
+
     std::string s2(schar2), s3(schar3);
     std::ofstream enerfile, sscfile;
     enerfile.open(s2); // opens the file
@@ -101,6 +90,11 @@ int main(int argc, char *argv[]){
         ampo += 0.5,"S+", b, "S-", b+1;
         ampo += 0.5,"S-", b, "S+", b+1;
         ampo += 1.0,"Sz", b, "Sz", b+1;
+    }
+    for (int b = 1; b < N-1; b++){
+        ampo += g2*0.5,"S+", b, "S-", b+2;
+        ampo += g2*0.5,"S-", b, "S+", b+2;
+        ampo += g2*1.0,"Sz", b, "Sz", b+2;
     }
     auto Hfinal = toMPO(ampo);
     
@@ -167,14 +161,9 @@ int main(int argc, char *argv[]){
     sscfile << std::endl;
 
     // time evolution parameters. Get time accuracy of 1E-4
-    if(method == 1){ //2nd order TEBD
-        dt = 0.01;
-        printfln("Starting TEBD2, dt = %0.2f", dt);
-    }
-    else{ //4th order TEBD
-        dt = 0.1;
-        printfln("Starting TEBD4, dt = %0.2f", dt);
-    }
+    dt = 0.1;
+    Real delta1 =  0.414490771794376*dt;
+    Real delta2 = -0.657963087177503*dt;
     Real tval = 0.0;
     double finalTime = double(N)/2.0/v + 2.0*tau*(1.0+tanhshift);
     int nt = int(finalTime/dt)+1;
@@ -191,22 +180,15 @@ int main(int argc, char *argv[]){
         //update magnetic field vector
         hvals = hvector(N, tval, h, v, tau, tanhshift);
         
-        // TEBD time update
+        // 4th order TEBD time update
         std::vector<BondGate> gates;
-        if(method==1){ // 2nd order TEBD
-            gates = makeGates(N, hvals, dt, sites, LED);
-        }
-        else{ //4th order TEBD
-            Real delta1 =  0.414490771794376*dt;
-            Real delta2 = -0.657963087177503*dt;
-            auto gatesdelta1 = makeGates(N, hvals, delta1, sites, LED);
-            auto gatesdelta2 = makeGates(N, hvals, delta2, sites, LED);
-            gates = gatesdelta1;
-            gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
-            gates.insert(std::end(gates), std::begin(gatesdelta2), std::end(gatesdelta2));
-            gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
-            gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
-        }
+        auto gatesdelta1 = makeGates(N, hvals, delta1, sites, LED);
+        auto gatesdelta2 = makeGates(N, hvals, delta2, sites, LED);
+        gates = gatesdelta1;
+        gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
+        gates.insert(std::end(gates), std::begin(gatesdelta2), std::end(gatesdelta2));
+        gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
+        gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
 
         // apply Trotter gates
         gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false});
@@ -331,6 +313,15 @@ std::vector<BondGate> makeGates(int L, std::vector<double> h, double dt, SiteSet
   return gates;
   
 }// makeGates
+
+std::vector<double> calculateLocalEnergy(MPS psi, std::vector<ITensor> LED){
+    std::vector<double> energyVector(N-1);
+    for (int b = 1; b < N; b++){
+        psi.position(b);
+        auto ket = psi(b)*psi(b+1);
+        localEnergy[b-1] = elt( dag(prime(ket,"Site")) * LED[b-1] * ket);
+    }
+}
 
 //calculate entanglement
 Real vonNeumannS(MPS psi, int b){
