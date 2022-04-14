@@ -7,7 +7,7 @@ std::vector<double> hvector(int, double, double, double, double, double);
 //calculates local energy density
 std::vector<double> calculateLocalEnergy(int, MPS, std::vector<ITensor>, std::vector<double>, SiteSet);
 //makes gates to pass to function gateTEvol
-std::vector<BondGate> makeGates(int, std::vector<double>, double, SiteSet, std::vector<ITensor>);
+std::vector<BondGate> makeGates(int, std::vector<double>, double, SiteSet, std::vector<ITensor>, std::vector<double>);
 //calculate Von Neumann entanglement entropy
 Real vonNeumannS(MPS, int);
 //calculate spin-spin correlator
@@ -181,8 +181,8 @@ int main(int argc, char *argv[]){
         
         // 4th order TEBD time update
         std::vector<BondGate> gates;
-        auto gatesdelta1 = makeGates(N, hvals, delta1, sites, LED);
-        auto gatesdelta2 = makeGates(N, hvals, delta2, sites, LED);
+        auto gatesdelta1 = makeGates(N, hvals, delta1, sites, LED, g);
+        auto gatesdelta2 = makeGates(N, hvals, delta2, sites, LED, g);
         gates = gatesdelta1;
         gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
         gates.insert(std::end(gates), std::begin(gatesdelta2), std::end(gatesdelta2));
@@ -319,63 +319,72 @@ std::vector<double> calculateLocalEnergy(int N, MPS psi, std::vector<ITensor> LE
 
 // second order Trotter breakup of time step dt
 // returns a vector of gates to pass to function gateTEvol
-std::vector<BondGate> makeGates(int L, std::vector<double> h, double dt, SiteSet sites, std::vector<ITensor> LED)
+std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet sites, std::vector<ITensor> LED, std::vector<double> g)
     {
     
-    const double g2 = 0.015625;
     std::vector<BondGate> gates; 
     //Create the gates exp(-i*tstep/2*hterm)
-    for(int i=1; i<=L; i++){
-        if(i<L){ //nearest neighbour
-            auto hterm = LED[i-1];
-            hterm += h[i-1]*op(sites,"Sz",i)*op(sites,"Id",i+1);
-            auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,hterm);
+    for(int b=1; b<=N; b++){
+        if(b<N){ //nearest neighbour
+
+            auto hterm = LED[b-1];
+            hterm += h[b-1]*op(sites,"Sz",b)*op(sites,"Id",b+1);
+            auto g = BondGate(sites,b,b+1,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
         }
         else{
-            auto hterm = h[i-1]*op(sites,"Id",i-1)*op(sites,"Sz",i);
-            auto g = BondGate(sites,i-1,i,BondGate::tReal,dt/2.,hterm);
-            gates.push_back(g);
-        }
-        if(i<L-1 && i%2!=0){ //next-nearest neighbour
-            gates.push_back( BondGate(sites, i+1, i+2) ); //swap sites
-            
-            auto hterm = LED[i-1]; //time evolve sites i, i+2
-            auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,g2*hterm);
-            gates.push_back(g);
-            
-            hterm = LED[i+1]; //time evolve site i+1, i+3
-            g = BondGate(sites,i+2,i+3,BondGate::tReal,dt/2.,g2*hterm);
-            gates.push_back(g);
 
-            gates.push_back( BondGate(sites, i+1, i+2) ); //swap back
+            auto hterm = h[b-1]*op(sites,"Id",b-1)*op(sites,"Sz",b);
+            auto g = BondGate(sites,b-1,b,BondGate::tReal,dt/2.,hterm);
+            gates.push_back(g);
         }
-    } // for i
+        for(int i = 1; i<int(size(g)); i++){ //long-range
+
+            if (b<N-i){
+
+                for (int j=i; j>=1; j--){//switch sites for next-nearest neighbour interaction
+                    gates.push_back( BondGate(sites,b+j,b+j+1) );
+                } // for 
+
+                auto hterm = g[i]*LED[b-1]; //time evolve sites b, b+i+1
+                auto g = BondGate(sites,b,b+1,BondGate::tReal,dt/2.,hterm);
+                gates.push_back(g);
+
+                for (int j=1; j<=i; j++){//switch back sites
+                    gates.push_back( BondGate(sites,b+j,b+j+1) );
+                } //for j
+            } //if
+        } //for i
+    } // for b
 
     //Create the gates exp(-i*tstep/2*hterm) in reverse order 
-    for(int i=L; i>=1; i--){
-        if(i<L-1 && i%2!=0){ //next-nearest neighbour
-            gates.push_back( BondGate(sites, i+1, i+2) ); //swap sites
-            
-            auto hterm = LED[i-1]; //time evolve
-            auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,g2*hterm);
-            gates.push_back(g);
+    for(int b=N; b>=1; b--){
+        for(int i = int(size(g))-1; i>=1; i--){ //long-range
 
-            hterm = LED[i+1]; //time evolve site i+1, i+3
-            g = BondGate(sites,i+2,i+3,BondGate::tReal,dt/2.,g2*hterm);
-            gates.push_back(g);
+            if (b<N-i){
 
-            gates.push_back( BondGate(sites, i+1, i+2) ); //swap back
-        }
-        if(i<L){
-            auto hterm = LED[i-1];
-            hterm += h[i-1]*op(sites,"Sz",i)*op(sites,"Id",i+1);
-            auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,hterm);
+                for (int j=i; j>=1; j--){//switch sites for next-nearest neighbour interaction
+                    gates.push_back( BondGate(sites,b+j,b+j+1) );
+                } // for 
+
+                auto hterm = g[i]*LED[b-1]; //time evolve sites b, b+i+1
+                auto g = BondGate(sites,b,b+1,BondGate::tReal,dt/2.,hterm);
+                gates.push_back(g);
+
+                for (int j=1; j<=i; j++){//switch back sites
+                    gates.push_back( BondGate(sites,b+j,b+j+1) );
+                } //for j
+            } //if
+        } //for i
+        if(b<N){
+            auto hterm = LED[b-1];
+            hterm += h[b-1]*op(sites,"Sz",b)*op(sites,"Id",b+1);
+            auto g = BondGate(sites,b,b+1,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
         }
         else{
-            auto hterm = h[i-1]*op(sites,"Id",i-1)*op(sites,"Sz",i);
-            auto g = BondGate(sites,i-1,i,BondGate::tReal,dt/2.,hterm);
+            auto hterm = h[b-1]*op(sites,"Id",b-1)*op(sites,"Sz",b);
+            auto g = BondGate(sites,b-1,b,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
         }
     }// for i, nearest-neighbour 
