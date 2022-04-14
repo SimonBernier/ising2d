@@ -238,7 +238,6 @@ std::vector<double> hvector(int N, double h)
             hvals[b-1] = -h;
         }
     }
-    
     return hvals;
 }
 
