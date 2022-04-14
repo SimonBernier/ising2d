@@ -5,7 +5,7 @@ using namespace itensor;
 //magnetic field vector
 std::vector<double> hvector(int, double, double, double, double, double);
 //calculates local energy density
-std::vector<double> calculateLocalEnergy(int, MPS, std::vector<ITensor>, std::vector<double>, SiteSet);
+double calculateLocalEnergy(int, int, MPS, std::vector<ITensor>, std::vector<double>, SiteSet);
 //makes gates to pass to function gateTEvol
 std::vector<BondGate> makeGates(int, std::vector<double>, double, SiteSet, std::vector<ITensor>, std::vector<double>);
 //calculate Von Neumann entanglement entropy
@@ -132,7 +132,9 @@ int main(int argc, char *argv[]){
     //get bond dimensions
     IndexSet bonds = linkInds(psi); 
     //calculate local energy <psi|Hf(x)|psi>
-    localEnergy = calculateLocalEnergy(N, psi, LED, g, sites);
+    for(int b=1; b<N; b++){
+        localEnergy[b-1] = calculateLocalEnergy(N, b, psi, LED, g, sites);
+    }
     //calculate spin-spin correlation
     for (int b = 1; b <= N; b++){
         auto [szsz,spsm] = spinspin(N/2+1,b,psi,sites);
@@ -198,7 +200,9 @@ int main(int argc, char *argv[]){
         //calculate entanglement entropy
         SvN = vonNeumannS(psi, N/2);
         //calculate local energy <psi|Hf(x)|psi>
-        localEnergy = calculateLocalEnergy(N, psi, LED, g, sites);
+        for(int b=1; b<N; b++){
+            localEnergy[b-1] = calculateLocalEnergy(N, b, psi, LED, g, sites);
+        }
 
         enerfile << tval << " " << en << " " << SvN << " ";
         IndexSet bonds = linkInds(psi); //get bond dimensions
@@ -269,51 +273,68 @@ std::vector<double> hvector(int N, double tval, double h, double v, double tau, 
 }
 
 //calculate local energy density and return a vector of doubles
-std::vector<double> calculateLocalEnergy(int N, MPS psi, std::vector<ITensor> LED, std::vector<double> g, SiteSet sites){
+double calculateLocalEnergy(int N, int b, MPS psi, std::vector<ITensor> LED, std::vector<double> g, SiteSet sites){
     
-    std::vector<double> energyVector(N-1);
+    double energy;
 
-    for (int b = 1; b < N; b++){
+    psi.position(b);
+    auto ket = psi(b)*psi(b+1);
+    energy = eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
 
-        psi.position(b);
-        auto ket = psi(b)*psi(b+1);
-        energyVector[b-1] = eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
+    for(int i = 1; i<int(size(g)); i++){
 
-        for(int i = 1; i<int(size(g)); i++){
+        for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
+            for (int k=i; k>=j; k--){
 
-            if (b<N-i){
+                int ind = b+k+j-1;
 
-                psi.position(b+i);
+                if (ind<N){
 
-                for (int j=i; j>=1; j--){//switch sites for next-nearest neighbour interaction
-
-                    auto g = BondGate(sites,b+j,b+j+1);
-                    auto AA = psi(b+j)*psi(b+j+1)*g.gate(); //contract over bond b+j
+                    psi.position(ind);
+                    auto g = BondGate(sites,ind,ind+1);
+                    auto AA = psi(ind)*psi(ind+1)*g.gate(); //contract over bond ind
                     AA.replaceTags("Site,1","Site,0");
                     psi.svdBond(g.i1(), AA, Fromright); //svd from the right
                     psi.position(g.i1()); //restore orthogonality center to the left
 
-                } // for j
+                } //if 
+            } // for k
+        } // for j
 
-                ket = psi(b)*psi(b+1);
-                energyVector[b-1] += g[i]*eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
+        for (int j=0; j<=i; j++){ //smart ordering of gates
+
+            int ind = b+2*j;
+
+            if (ind<N){
+
+                psi.position(ind);
+                auto ket = psi(ind)*psi(ind+1);
+                energy += g[i]*eltC( dag(prime(ket,"Site")) * LED[ind-1] * ket).real();
+
+            }
+        } // for j
                 
-                for (int j=1; j<=i; j++){//switch back sites
+        for (int j=i; j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
+            for (int k=j; k<=i; k++){
 
-                    auto g = BondGate(sites,b+j,b+j+1);
-                    auto AA = psi(b+j)*psi(b+j+1)*g.gate(); //contract over bond b+1
+                int ind = b+k+j-1;
+
+                if (ind<N){
+
+                    psi.position(ind);
+                    auto g = BondGate(sites,ind,ind+1);
+                    auto AA = psi(ind)*psi(ind+1)*g.gate(); //contract over bond ind
                     AA.replaceTags("Site,1","Site,0");
                     psi.svdBond(g.i1(), AA, Fromleft); //svd from the left
                     psi.position(g.i2()); //move orthogonality center to the right
 
-                } // for j
-            } // if
-        } // for i
-        
+                } // if
+            } //for k
+        } // for j
+        psi.orthogonalize({"Cutoff=",1E-10,"MaxDim=",512}); //compress MPS to make next step faster
+    }//for i
 
-    }//for b
-
-    return energyVector;
+    return energy;
 
 }//calculateLocalEnergy
 
@@ -323,6 +344,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
     {
     
     std::vector<BondGate> gates; 
+
     //Create the gates exp(-i*tstep/2*hterm)
     for(int b=1; b<=N; b++){
         if(b<N){ //nearest neighbour
@@ -342,17 +364,36 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
 
             if (b<N-i){
 
-                for (int j=i; j>=1; j--){//switch sites for next-nearest neighbour interaction
-                    gates.push_back( BondGate(sites,b+j,b+j+1) );
-                } // for 
+                for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
+                    for (int k=i; k>=j; k--){
 
-                auto hterm = g[i]*LED[b-1]; //time evolve sites b, b+i+1
-                auto g = BondGate(sites,b,b+1,BondGate::tReal,dt/2.,hterm);
-                gates.push_back(g);
+                        int ind = b+k+j-1;
+                        if (ind<N){
+                            gates.push_back( BondGate(sites,ind,ind+1) );
+                        }
 
-                for (int j=1; j<=i; j++){//switch back sites
-                    gates.push_back( BondGate(sites,b+j,b+j+1) );
-                } //for j
+                    } // for k
+                } // for j
+
+                for (int j=0; j<=i; j++){ //smart ordering of gates
+                    int ind = b+2*j;
+                    if (ind<N){
+                        auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
+                        auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
+                        gates.push_back(g);
+                    }
+                }
+                
+                for (int j=i; j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
+                    for (int k=j; k<=i; k++){
+
+                        int ind = b+k+j-1;
+                        if (ind<N){
+                            gates.push_back( BondGate(sites,ind,ind+1) );
+                        }
+                        
+                    } // for k
+                } // for j
             } //if
         } //for i
     } // for b
@@ -363,17 +404,36 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
 
             if (b<N-i){
 
-                for (int j=i; j>=1; j--){//switch sites for next-nearest neighbour interaction
-                    gates.push_back( BondGate(sites,b+j,b+j+1) );
-                } // for 
+                for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
+                    for (int k=i; k>=j; k--){
 
-                auto hterm = g[i]*LED[b-1]; //time evolve sites b, b+i+1
-                auto g = BondGate(sites,b,b+1,BondGate::tReal,dt/2.,hterm);
-                gates.push_back(g);
+                        int ind = b+k+j-1;
+                        if (ind<N){
+                            gates.push_back( BondGate(sites,ind,ind+1) );
+                        }
 
-                for (int j=1; j<=i; j++){//switch back sites
-                    gates.push_back( BondGate(sites,b+j,b+j+1) );
-                } //for j
+                    } // for k
+                } // for j
+
+                for (int j=0; j<=i; j++){ //smart ordering of gates
+                    int ind = b+2*j;
+                    if (ind<N){
+                        auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
+                        auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
+                        gates.push_back(g);
+                    }
+                } // for j
+                
+                for (int j=i; j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
+                    for (int k=j; k<=i; k++){
+
+                        int ind = b+k+j-1;
+                        if (ind<N){
+                            gates.push_back( BondGate(sites,ind,ind+1) );
+                        }
+                        
+                    } // for k
+                } // for j
             } //if
         } //for i
         if(b<N){
