@@ -3,7 +3,7 @@
 using namespace itensor;
 
 //magnetic field vector
-std::vector<double> hvector(int, double, double, double, double, double);
+std::vector<double> hvector(int, double);
 //calculates local energy density
 std::vector<double> calculateLocalEnergy(int, MPS, std::vector<ITensor>, std::vector<double>, SiteSet);
 //makes gates to pass to function gateTEvol
@@ -16,53 +16,36 @@ std::tuple<double, double> spinspin(int,int,MPS,SiteSet);
 int main(int argc, char *argv[]){
     std::clock_t tStart = std::clock();
 
-    int runNumber = 0;
-    if(argc > 1)
-        runNumber = std::stoi(argv[1]);
-    
     int N, maxB=512, iRange = 4; // We assume N is even and N/2 is even.
     double h, truncE=1E-10;
 
-    char schar1[64];
-    int n1 = std::sprintf(schar1, "parameters_run%d.txt",runNumber);
-    std::string s1(schar1);
-    std::ifstream parameter_file(s1);
-    std::string parameter;
-    if ( parameter_file.is_open() ) { // always check whether the file is open
-        std::getline(parameter_file, parameter); //skip header line
-        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
-        N = std::stoi(parameter);
-        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
-        h = std::stod(parameter);
-        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
-        truncE = std::stod(parameter);
-        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
-        maxB = std::stod(parameter);
-    }
-    parameter_file.close();
+    if(argc > 1)
+        N = std::stoi(argv[1]);
+    if(argc > 2)
+        h = std::stod(argv[2]);  
     
     printfln("N = %d, h = %0.1f, cutoff = %0.1e, max bond dim = %d", N, h, truncE, maxB);
 
     // We will write into a file with the time-evolved energy density at all times.
+    char schar1[128];
     char schar2[128];
-    char schar3[128];
-    int n2 = std::sprintf(schar2,"N_%d_h_%0.1f_cutoff_%0.0e_maxDim_%d_heisR3CritEn.dat", N,h,truncE,maxB);
-    int n3 = std::sprintf(schar3,"N_%d_h_%0.1f_cutoff_%0.0e_maxDim_%d_heisR3CritSSC.dat", N,h,truncE,maxB);
+    int n1 = std::sprintf(schar1,"N_%d_h_%0.1f_cutoff_%0.0e_maxDim_%d_heisR3CritEn.dat", N,h,truncE,maxB);
+    int n2 = std::sprintf(schar2,"N_%d_h_%0.1f_cutoff_%0.0e_maxDim_%d_heisR3CritSSC.dat", N,h,truncE,maxB);
 
-    std::string s2(schar2), s3(schar3);
+    std::string s1(schar1), s2(schar2);
     std::ofstream enerfile, sscfile;
-    enerfile.open(s2); // opens the file
+    enerfile.open(s1); // opens the file
     if( !enerfile ) { // file couldn't be opened
         std::cerr << "Error: file could not be opened" << std::endl;
         exit(1);
     }
-    sscfile.open(s3); // opens the file
+    sscfile.open(s2); // opens the file
     if( !sscfile ) { // file couldn't be opened
         std::cerr << "Error: file could not be opened" << std::endl;
         exit(1);
     }
-    enerfile << "time" << " " << "energy" << " " << "SvN" << " " << "bondDim" << " " << "localEnergy" << " " << std::endl;
-    sscfile << "time" << " " << "szsz" << " " << "spsm" << " " << std::endl;
+    enerfile << "energy" << " " << "SvN" << " " << "bondDim" << " " << "localEnergy" << " " << std::endl;
+    sscfile << "szsz" << " " << "spsm" << " " << std::endl;
     
     auto sites = SpinHalf(N);
     auto state = InitState(sites);
@@ -127,13 +110,13 @@ int main(int argc, char *argv[]){
     localEnergy = calculateLocalEnergy(N, psi, LED, g, sites);
     //calculate spin-spin correlation
     for (int b = 1; b <= N; b++){
-        auto [szsz,spsm] = spinspin(N/2+1,b,psi,sites);
+        auto [szsz,spsm] = spinspin(N/2,b,psi,sites);
         szszcorr[b-1] = szsz;
         spsmcorr[b-1] = spsm;
     }
 
     //store variables to energy file
-    enerfile << 0.0 << " " << energy << " " << SvN << " ";
+    enerfile << energy << " " << SvN << " ";
     for (int j=0; j<N-1; j++){
         enerfile << dim(bonds[j]) << " ";
     }
@@ -142,7 +125,6 @@ int main(int argc, char *argv[]){
     }
     enerfile << std::endl;
     //store variables to spin spin correlation file
-    sscfile << 0.0 << " ";
     for (int j = 0; j < N; j++){
         sscfile << szszcorr[j] << " ";
     }
