@@ -323,11 +323,15 @@ std::vector<BondGate> makeGates(int L, std::vector<double> h, double dt, SiteSet
             auto g = BondGate(sites,i-1,i,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
         }
-        if(i<L-1){ //next-nearest neighbour
+        if(i<L-1 && i%2!=0){ //next-nearest neighbour
             gates.push_back( BondGate(sites, i+1, i+2) ); //swap sites
             
-            auto hterm = LED[i-1]; //time evolve
+            auto hterm = LED[i-1]; //time evolve sites i, i+2
             auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,g2*hterm);
+            gates.push_back(g);
+            
+            hterm = LED[i+1]; //time evolve site i+1, i+3
+            g = BondGate(sites,i+2,i+3,BondGate::tReal,dt/2.,g2*hterm);
             gates.push_back(g);
 
             gates.push_back( BondGate(sites, i+1, i+2) ); //swap back
@@ -336,11 +340,15 @@ std::vector<BondGate> makeGates(int L, std::vector<double> h, double dt, SiteSet
 
     //Create the gates exp(-i*tstep/2*hterm) in reverse order 
     for(int i=L; i>=1; i--){
-        if(i<L-1){ //next-nearest neighbour
+        if(i<L-1 && i%2!=0){ //next-nearest neighbour
             gates.push_back( BondGate(sites, i+1, i+2) ); //swap sites
             
             auto hterm = LED[i-1]; //time evolve
             auto g = BondGate(sites,i,i+1,BondGate::tReal,dt/2.,g2*hterm);
+            gates.push_back(g);
+
+            hterm = LED[i+1]; //time evolve site i+1, i+3
+            g = BondGate(sites,i+2,i+3,BondGate::tReal,dt/2.,g2*hterm);
             gates.push_back(g);
 
             gates.push_back( BondGate(sites, i+1, i+2) ); //swap back
