@@ -20,8 +20,8 @@ int main(int argc, char *argv[]){
     if(argc > 1)
         runNumber = std::stoi(argv[1]);
     
-    int N, maxB=512, iRange = 4; // We assume N is even and N/2 is even.
-    double v, h, tau, dt, truncE=1E-10;
+    int N, method=1, maxB=512, iRange = 4; // We assume N is even and N/2 is even.
+    double v, h, tau, truncE=1E-10;
     double tanhshift = 2.0;
 
     char schar1[64];
@@ -31,6 +31,8 @@ int main(int argc, char *argv[]){
     std::string parameter;
     if ( parameter_file.is_open() ) { // always check whether the file is open
         std::getline(parameter_file, parameter); //skip header line
+        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
+        method = std::stoi(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
         N = std::stoi(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
@@ -52,11 +54,18 @@ int main(int argc, char *argv[]){
     // We will write into a file with the time-evolved energy density at all times.
     char schar2[128];
     char schar3[128];
-    int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.0e_maxDim_%d_heisR3SuperEn.dat"
+    if (method==0){
+        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.0e_maxDim_%d_heisR3SuperEn_tebd2.dat"
                                     ,N,v,h,tau,truncE,maxB);
-    int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.0e_maxDim_%d_heisR3SuperSSC.dat"
+        int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.0e_maxDim_%d_heisR3SuperSSC_tebd2.dat"
                                     ,N,v,h,tau,truncE,maxB);
-
+    }
+    else if (method==1){
+        int n2 = std::sprintf(schar2,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.0e_maxDim_%d_heisR3SuperEn_tebd4.dat"
+                                    ,N,v,h,tau,truncE,maxB);
+        int n3 = std::sprintf(schar3,"N_%d_v_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.0e_maxDim_%d_heisR3SuperSSC_tebd4.dat"
+                                    ,N,v,h,tau,truncE,maxB);
+    }
     std::string s2(schar2), s3(schar3);
     std::ofstream enerfile, sscfile;
     enerfile.open(s2); // opens the file
@@ -103,7 +112,8 @@ int main(int argc, char *argv[]){
     
     //sweeps
     auto sweeps = Sweeps(5); //number of sweeps is 5
-    sweeps.maxdim() = 10,20,100,200,maxB; //gradually increase states kept
+    sweeps.maxdim() = 10,20,50,100; //gradually increase states kept
+    sweeps.noise() = 1E-7,1E-8,0;
     sweeps.cutoff() = truncE; //desired truncation error
 
     // Create the Local Energy Density Tensors
@@ -162,12 +172,19 @@ int main(int argc, char *argv[]){
     sscfile << std::endl;
 
     // time evolution parameters. Get time accuracy of 1E-4
-    dt = 0.1;
-    Real delta1 =  0.414490771794376*dt;
-    Real delta2 = -0.657963087177503*dt;
-    Real tval = 0.0;
+    double tval = 0.0;
+    double dt = 0.125;
     double finalTime = double(N)/2.0/v + 2.0*tau*(1.0+tanhshift);
-    int nt = int(finalTime/dt)+1;
+    int nt=1;
+
+    if(method == 0){
+        dt = 0.05;
+        nt = int(finalTime/dt)+1;
+    }
+    else if(method==1){
+        nt = int(finalTime/dt)+1;
+    }
+
     auto args = Args("Cutoff=",truncE,"MaxDim=",maxB);
     
     printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, energy, SvN, maxLinkDim(psi));
@@ -175,46 +192,55 @@ int main(int argc, char *argv[]){
     ////////////////////
     // TIME EVOLUTION //
     ////////////////////
-    for (int n = 1; n <= nt; ++n){
+    for (int n = 1; n <= nt; n++){
+
         tval += dt;
 
         //update magnetic field vector
         hvals = hvector(N, tval, h, v, tau, tanhshift);
-        
-        // 4th order TEBD time update
+
         std::vector<BondGate> gates;
-        auto gatesdelta1 = makeGates(N, hvals, delta1, sites, LED, g);
-        auto gatesdelta2 = makeGates(N, hvals, delta2, sites, LED, g);
-        gates = gatesdelta1;
-        gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
-        gates.insert(std::end(gates), std::begin(gatesdelta2), std::end(gatesdelta2));
-        gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
-        gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
+        if (method == 0){ // 2nd order TEBD time update
+            gates = makeGates(N, hvals, dt, sites, LED, g);
+        }
+        else if (method == 1){ // 4th order TEBD time update
+            double delta1 =  0.414490771794376*dt;
+            double delta2 = -0.657963087177503*dt;
+            auto gatesdelta1 = makeGates(N, hvals, delta1, sites, LED, g);
+            auto gatesdelta2 = makeGates(N, hvals, delta2, sites, LED, g);
+            gates = gatesdelta1;
+            gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
+            gates.insert(std::end(gates), std::begin(gatesdelta2), std::end(gatesdelta2));
+            gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
+            gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
+        }
 
         // apply Trotter gates
         gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false});
         psi.orthogonalize(args); //orthogonalize to minimize bond dimensions
         
-        // calculate energy <psi|Hf|psi>
-        auto en = innerC(psi, Hfinal, psi).real();
-        //calculate entanglement entropy
-        SvN = vonNeumannS(psi, N/2);
-        //calculate local energy <psi|Hf(x)|psi>
-        for(int b=1; b<N; b++){
-            localEnergy[b-1] = calculateLocalEnergy(N, b, psi, LED, g, sites);
-        }
+        if( n % int(0.5/dt) == 0){
+            // calculate energy <psi|Hf|psi>
+            auto en = innerC(psi, Hfinal, psi).real();
+            //calculate entanglement entropy
+            SvN = vonNeumannS(psi, N/2);
+            //calculate local energy <psi|Hf(x)|psi>
+            for(int b=1; b<N; b++){
+                localEnergy[b-1] = calculateLocalEnergy(N, b, psi, LED, g, sites);
+            }
 
-        enerfile << tval << " " << en << " " << SvN << " ";
-        IndexSet bonds = linkInds(psi); //get bond dimensions
-        for (int j = 0; j < N-1; j++){
-            enerfile << dim(bonds[j]) << " ";
-        }
-        for (int j = 0; j < N-1; j++){
-            enerfile << localEnergy[j] << " ";
-        }
-        enerfile << std::endl;
+            enerfile << tval << " " << en << " " << SvN << " ";
+            IndexSet bonds = linkInds(psi); //get bond dimensions
+            for (int j = 0; j < N-1; j++){
+                enerfile << dim(bonds[j]) << " ";
+            }
+            for (int j = 0; j < N-1; j++){
+                enerfile << localEnergy[j] << " ";
+            }
+            enerfile << std::endl;
 
-        printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, SvN, maxLinkDim(psi));
+            printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, SvN, maxLinkDim(psi));
+        }
 
         if( n % int(1.0/dt) == 0){
             //calculate spin-spin correlation
