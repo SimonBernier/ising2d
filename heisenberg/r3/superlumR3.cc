@@ -5,7 +5,7 @@ using namespace itensor;
 //magnetic field vector
 std::vector<double> hvector(int, double, double, double, double, double);
 //calculates local energy density
-std::vector<double> calculateLocalEnergy(int, MPS, std::vector<ITensor>, SiteSet);
+std::vector<double> calculateLocalEnergy(int, MPS, std::vector<ITensor>, std::vector<double>, SiteSet);
 //makes gates to pass to function gateTEvol
 std::vector<BondGate> makeGates(int, std::vector<double>, double, SiteSet, std::vector<ITensor>);
 //calculate Von Neumann entanglement entropy
@@ -87,14 +87,13 @@ int main(int argc, char *argv[]){
     std::vector<double> g(iRange);
     for (int i = 1; i<=iRange; i++){
         g[i-1] = pow( 1./double(i), 3.);
-        printfln("%0.5f", g[i-1]);
     }
     
     // Create the Target Hamiltonian and find the Ground State Energy Density
     auto ampo = AutoMPO(sites);
     
     for(int i = 1; i<=iRange; i++){
-        for (int b = 1; b < N; b++){
+        for (int b = 1; b <= N-i; b++){
             ampo += g[i-1]*0.5,"S+", b, "S-", b+i;
             ampo += g[i-1]*0.5,"S-", b, "S+", b+i;
             ampo += g[i-1]*1.0,"Sz", b, "Sz", b+i;
@@ -133,7 +132,7 @@ int main(int argc, char *argv[]){
     //get bond dimensions
     IndexSet bonds = linkInds(psi); 
     //calculate local energy <psi|Hf(x)|psi>
-    localEnergy = calculateLocalEnergy(N, psi, LED, sites);
+    localEnergy = calculateLocalEnergy(N, psi, LED, g, sites);
     //calculate spin-spin correlation
     for (int b = 1; b <= N; b++){
         auto [szsz,spsm] = spinspin(N/2+1,b,psi,sites);
@@ -199,7 +198,7 @@ int main(int argc, char *argv[]){
         //calculate entanglement entropy
         SvN = vonNeumannS(psi, N/2);
         //calculate local energy <psi|Hf(x)|psi>
-        localEnergy = calculateLocalEnergy(N, psi, LED, sites);
+        localEnergy = calculateLocalEnergy(N, psi, LED, g, sites);
 
         enerfile << tval << " " << en << " " << SvN << " ";
         IndexSet bonds = linkInds(psi); //get bond dimensions
@@ -270,9 +269,8 @@ std::vector<double> hvector(int N, double tval, double h, double v, double tau, 
 }
 
 //calculate local energy density and return a vector of doubles
-std::vector<double> calculateLocalEnergy(int N, MPS psi, std::vector<ITensor> LED, SiteSet sites){
+std::vector<double> calculateLocalEnergy(int N, MPS psi, std::vector<ITensor> LED, std::vector<double> g, SiteSet sites){
     
-    const double g2 = 0.015625;
     std::vector<double> energyVector(N-1);
 
     for (int b = 1; b < N; b++){
@@ -281,24 +279,37 @@ std::vector<double> calculateLocalEnergy(int N, MPS psi, std::vector<ITensor> LE
         auto ket = psi(b)*psi(b+1);
         energyVector[b-1] = eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
 
-        if (b<N-1){
-            //switch sites for next-nearest neighbour interaction
-            psi.position(b+1);
-            auto g = BondGate(sites,b+1,b+2);
-            auto AA = psi(b+1)*psi(b+2)*g.gate(); //contract over bond b+1
-            AA.replaceTags("Site,1","Site,0");
-            psi.svdBond(g.i1(), AA, Fromleft); //svd from the left
-            psi.position(g.i1()); //restore orthogonality center to the left 
+        for(int i = 1; i<int(size(g)); i++){
 
-            ket = psi(b)*psi(b+1);
-            energyVector[b-1] += g2*eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
+            if (b<N-i){
 
-            //switch back sites
-            AA = psi(b+1)*psi(b+2)*g.gate(); //contract over bond b+1
-            AA.replaceTags("Site,1","Site,0");
-            psi.svdBond(g.i1(), AA, Fromleft); //svd from the left
-            psi.position(g.i2()); //move orthogonality center to the right
-        }
+                psi.position(b+i);
+
+                for (int j=i; j>=1; j--){//switch sites for next-nearest neighbour interaction
+
+                    auto g = BondGate(sites,b+j,b+j+1);
+                    auto AA = psi(b+j)*psi(b+j+1)*g.gate(); //contract over bond b+j
+                    AA.replaceTags("Site,1","Site,0");
+                    psi.svdBond(g.i1(), AA, Fromright); //svd from the right
+                    psi.position(g.i1()); //restore orthogonality center to the left
+
+                } // for j
+
+                ket = psi(b)*psi(b+1);
+                energyVector[b-1] += g[i]*eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
+                
+                for (int j=1; j<=i; j++){//switch back sites
+
+                    auto g = BondGate(sites,b+j,b+j+1);
+                    auto AA = psi(b+j)*psi(b+j+1)*g.gate(); //contract over bond b+1
+                    AA.replaceTags("Site,1","Site,0");
+                    psi.svdBond(g.i1(), AA, Fromleft); //svd from the left
+                    psi.position(g.i2()); //move orthogonality center to the right
+
+                } // for j
+            } // if
+        } // for i
+        
 
     }//for b
 
