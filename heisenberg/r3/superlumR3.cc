@@ -174,6 +174,8 @@ int main(int argc, char *argv[]){
     // time evolution parameters. Get time accuracy of 1E-4
     double tval = 0.0;
     double dt = 0.125;
+    double delta1 =  0.414490771794376*dt;
+    double delta2 = -0.657963087177503*dt;
     double finalTime = double(N)/2.0/v + 2.0*tau*(1.0+tanhshift);
     int nt=1;
 
@@ -441,7 +443,8 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
                     } // for k
                 } // for j
 
-                for (int j=0; j<=i; j++){ //smart ordering of gates
+                for (int j=i; j>=0; j--){ //smart ordering of gates
+                
                     int ind = b+2*j;
                     if (ind<N){
                         auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
