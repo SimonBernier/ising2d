@@ -197,7 +197,7 @@ int main(int argc, char *argv[]){
     ////////////////////
     // TIME EVOLUTION //
     ////////////////////
-    for (int n = 1; n <= nt; n++){
+    for (int n = 1; n <= 1; n++){
 
         tval += dt;
 
@@ -373,84 +373,99 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
             auto hterm = h[b-1]*op(sites,"Id",b-1)*op(sites,"Sz",b);
             auto g = BondGate(sites,b-1,b,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
-        }
-        for(int i = 1; i<int(size(g)); i++){ //long-range
+        }// if
+    }// for b
 
-            if (b<N-i){
+    for(int i = 1; i<int(size(g)); i++){ //long-range
+        printfln("\ninteraction range %d", i+1);
+        for( int b=1; b<N-i; b+=i+1){
 
-                for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
-                    for (int k=i; k>=j; k--){
+            for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
+                for (int k=i; k>=j; k--){
 
-                        int ind = b+k+j-1;
-                        if (ind<N){
-                            gates.push_back( BondGate(sites,ind,ind+1) );
-                        }
-
-                    } // for k
-                } // for j
-
-                for (int j=0; j<=i; j++){ //smart ordering of gates
-                    int ind = b+2*j;
+                    int ind = b+k+j-1;
                     if (ind<N){
-                        auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
-                        auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
-                        gates.push_back(g);
+                        //printf(" sg%d ", ind);
+                        gates.push_back( BondGate(sites,ind,ind+1) );
                     }
-                }
-                
-                for (int j=i; j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
-                    for (int k=j; k<=i; k++){
 
-                        int ind = b+k+j-1;
-                        if (ind<N){
-                            gates.push_back( BondGate(sites,ind,ind+1) );
-                        }
-                        
-                    } // for k
-                } // for j
-            } //if
-        } //for i
-    } // for b
+                } // for k
+            } // for j
+
+            for (int j=0; j<=i; j++){ //smart ordering of gates
+                int ind = b+2*j;
+                if (ind<N){
+                    printf(" tg%d ", ind);
+                    auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
+                    auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
+                    gates.push_back(g);
+                } //if
+            }// for j
+                
+            for (int j=i; j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
+                for (int k=j; k<=i; k++){
+
+                    int ind = b+k+j-1;
+                    if (ind<N){
+                        //printf(" sg%d ", ind);
+                        gates.push_back( BondGate(sites,ind,ind+1) );
+                    }
+                    
+                } // for k
+            } // for j
+        } //for b
+    } // for i
+
+    println("\nreverse order\n");
 
     //Create the gates exp(-i*tstep/2*hterm) in reverse order 
-    for(int b=N; b>=1; b--){
-        for(int i = int(size(g))-1; i>=1; i--){ //long-range
+    for(int i = int(size(g))-1; i>=1; i--){ //long-range
 
-            if (b<N-i){
+        printfln("\ninteraction range %d", i+1);
 
-                for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
-                    for (int k=i; k>=j; k--){
+        for(int b=1; b<N-i; b+=i+1){
 
-                        int ind = b+k+j-1;
-                        if (ind<N){
-                            gates.push_back( BondGate(sites,ind,ind+1) );
-                        }
+            for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
+                for (int k=i; k>=j; k--){
 
-                    } // for k
-                } // for j
-
-                for (int j=i; j>=0; j--){ //smart ordering of gates
-
-                    int ind = b+2*j;
+                    int ind = b+k+j-1;
                     if (ind<N){
-                        auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
-                        auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
-                        gates.push_back(g);
+                        //printf(" sg%d ", ind);
+                        gates.push_back( BondGate(sites,ind,ind+1) );
                     }
-                } // for j
-                
-                for (int j=i; j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
-                    for (int k=j; k<=i; k++){
 
-                        int ind = b+k+j-1;
-                        if (ind<N){
-                            gates.push_back( BondGate(sites,ind,ind+1) );
-                        }
-                        
-                    } // for k
-                } // for j
-            } //if
-        } //for i
+                } // for k
+            } // for j
+
+            for (int j=0; j<=i; j++){ //smart ordering of gates
+
+                int ind = N - 2*j - b + (i+1)%2;
+                printf(" tg%d ", ind);
+
+                if (ind<N){
+                    auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
+                    auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
+                    gates.push_back(g);
+                }
+            } // for j
+            
+            for (int j=i; j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
+                for (int k=j; k<=i; k++){
+
+                    int ind = b+k+j-1;
+                    if (ind<N){
+                        //printf(" sg%d ", ind);
+                        gates.push_back( BondGate(sites,ind,ind+1) );
+                    }
+                    
+                } // for k
+            } // for j
+        } //for b
+    }// for i
+
+    println(" ");
+
+    for(int b=N; b>=1; b--){ // nearest-neighbour
         if(b<N){
             auto hterm = LED[b-1];
             hterm += h[b-1]*op(sites,"Sz",b)*op(sites,"Id",b+1);
@@ -462,7 +477,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
             auto g = BondGate(sites,b-1,b,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
         }
-    }// for i, nearest-neighbour 
+    }// for b 
 
   return gates;
   
