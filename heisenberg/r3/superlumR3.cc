@@ -22,7 +22,7 @@ int main(int argc, char *argv[]){
     
     int N, method=1, maxB=512, iRange = 4; // We assume N is even and N/2 is even.
     double v, h, tau, truncE=1E-10;
-    double tanhshift = 2.0;
+    double tanhshift = 200.0;
 
     char schar1[64];
     int n1 = std::sprintf(schar1, "parameters_run%d.txt",runNumber);
@@ -95,17 +95,20 @@ int main(int argc, char *argv[]){
     // make vector for interaction strenght depending on range
     std::vector<double> g(iRange);
     for (int i = 1; i<=iRange; i++){
-        g[i-1] = pow( 1./double(i), 3.);
+        if (i==1)
+            g[0] = 1.0;
+        else
+            g[i-1] = pow( 1./double(i), 3.);
     }
     
     // Create the Target Hamiltonian and find the Ground State Energy Density
     auto ampo = AutoMPO(sites);
     
-    for(int i = 1; i<=iRange; i++){
-        for (int b = 1; b <= N-i; b++){
-            ampo += g[i-1]*0.5,"S+", b, "S-", b+i;
-            ampo += g[i-1]*0.5,"S-", b, "S+", b+i;
-            ampo += g[i-1]*1.0,"Sz", b, "Sz", b+i;
+    for(int i = 0; i<iRange; i++){
+        for (int b = 1; b < N-i; b++){
+            ampo += g[i]*0.5,"S+", b, "S-", b+i+1;
+            ampo += g[i]*0.5,"S-", b, "S+", b+i+1;
+            ampo += g[i]*1.0,"Sz", b, "Sz", b+i+1;
         }
     }
     auto Hfinal = toMPO(ampo);
@@ -113,7 +116,6 @@ int main(int argc, char *argv[]){
     //sweeps
     auto sweeps = Sweeps(5); //number of sweeps is 5
     sweeps.maxdim() = 10,20,50,100; //gradually increase states kept
-    sweeps.noise() = 1E-7,1E-8,0;
     sweeps.cutoff() = truncE; //desired truncation error
 
     // Create the Local Energy Density Tensors
@@ -176,7 +178,8 @@ int main(int argc, char *argv[]){
     double dt = 0.125;
     double delta1 =  0.414490771794376*dt;
     double delta2 = -0.657963087177503*dt;
-    double finalTime = double(N)/2.0/v + 2.0*tau*(1.0+tanhshift);
+    //double finalTime = double(N)/2.0/v + 2.0*tau*(1.0+tanhshift);
+    double finalTime = 5.;
     int nt=1;
 
     if(method == 0){
@@ -206,8 +209,6 @@ int main(int argc, char *argv[]){
             gates = makeGates(N, hvals, dt, sites, LED, g);
         }
         else if (method == 1){ // 4th order TEBD time update
-            double delta1 =  0.414490771794376*dt;
-            double delta2 = -0.657963087177503*dt;
             auto gatesdelta1 = makeGates(N, hvals, delta1, sites, LED, g);
             auto gatesdelta2 = makeGates(N, hvals, delta2, sites, LED, g);
             gates = gatesdelta1;
@@ -219,7 +220,6 @@ int main(int argc, char *argv[]){
 
         // apply Trotter gates
         gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false});
-        psi.orthogonalize(args); //orthogonalize to minimize bond dimensions
         
         if( n % int(0.5/dt) == 0){
             // calculate energy <psi|Hf|psi>
@@ -311,55 +311,41 @@ double calculateLocalEnergy(int N, int b, MPS psi, std::vector<ITensor> LED, std
 
     for(int i = 1; i<int(size(g)); i++){
 
-        for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
-            for (int k=i; k>=j; k--){
+        for (int j=i; j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
 
-                int ind = b+k+j-1;
-
-                if (ind<N){
-
-                    psi.position(ind);
-                    auto g = BondGate(sites,ind,ind+1);
-                    auto AA = psi(ind)*psi(ind+1)*g.gate(); //contract over bond ind
-                    AA.replaceTags("Site,1","Site,0");
-                    psi.svdBond(g.i1(), AA, Fromright); //svd from the right
-                    psi.position(g.i1()); //restore orthogonality center to the left
-
-                } //if 
-            } // for k
-        } // for j
-
-        for (int j=0; j<=i; j++){ //smart ordering of gates
-
-            int ind = b+2*j;
+            int ind = b+j;
 
             if (ind<N){
 
                 psi.position(ind);
-                auto ket = psi(ind)*psi(ind+1);
-                energy += g[i]*eltC( dag(prime(ket,"Site")) * LED[ind-1] * ket).real();
+                auto g = BondGate(sites,ind,ind+1);
+                auto AA = psi(ind)*psi(ind+1)*g.gate(); //contract over bond ind
+                AA.replaceTags("Site,1","Site,0");
+                psi.svdBond(g.i1(), AA, Fromleft); //svd from the left
+                psi.position(g.i1()); //restore orthogonality center to the left
 
-            }
+            } //if 
         } // for j
+
+        psi.position(b);
+        ket = psi(b)*psi(b+1);
+        energy += g[i]*eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
                 
-        for (int j=i; j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
-            for (int k=j; k<=i; k++){
+        for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
 
-                int ind = b+k+j-1;
+            int ind = b+j;
 
-                if (ind<N){
+            if (ind<N){
 
-                    psi.position(ind);
-                    auto g = BondGate(sites,ind,ind+1);
-                    auto AA = psi(ind)*psi(ind+1)*g.gate(); //contract over bond ind
-                    AA.replaceTags("Site,1","Site,0");
-                    psi.svdBond(g.i1(), AA, Fromleft); //svd from the left
-                    psi.position(g.i2()); //move orthogonality center to the right
+                psi.position(ind);
+                auto g = BondGate(sites,ind,ind+1);
+                auto AA = psi(ind)*psi(ind+1)*g.gate(); //contract over bond ind
+                AA.replaceTags("Site,1","Site,0");
+                psi.svdBond(g.i1(), AA, Fromleft); //svd from the left
+                psi.position(g.i2()); //move orthogonality center to the right
 
-                } // if
-            } //for k
+            } // if
         } // for j
-        psi.orthogonalize({"Cutoff=",1E-10,"MaxDim=",512}); //compress MPS to make next step faster
     }//for i
 
     return energy;
@@ -444,7 +430,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
                 } // for j
 
                 for (int j=i; j>=0; j--){ //smart ordering of gates
-                
+
                     int ind = b+2*j;
                     if (ind<N){
                         auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
