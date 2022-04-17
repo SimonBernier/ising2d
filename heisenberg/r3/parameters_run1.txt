@@ -1,2 +1,2 @@
 method L v h tau truncE maxDim 
-1 64 2.0 0.5 0.05 1.0e-10 512
+1 16 2.0 0.5 0.05 1.0e-10 512

@@ -22,7 +22,7 @@ int main(int argc, char *argv[]){
     
     int N, method=1, maxB=512, iRange = 4; // We assume N is even and N/2 is even.
     double v, h, tau, truncE=1E-10;
-6~    double tanhshift = 200.0;
+    double tanhshift = 200.0;
 
     char schar1[64];
     int n1 = std::sprintf(schar1, "parameters_run%d.txt",runNumber);
@@ -386,12 +386,12 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
 		//printf("(skip %d of %d)", skip, i+1);
 	    }
 
-            for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
+            for (int j=1; j<=i-(skip>0)*(skip-1); j++){// SMART switch sites for next-nearest neighbour interaction
                 for (int k=i; k>=j; k--){
 
                     int ind = b+k+j-1;
+		    //printf(" sg%d ", ind);
                     if (ind<N){
-                        //printf(" sg%d ", ind);
                         gates.push_back( BondGate(sites,ind,ind+1) );
                     }
 
@@ -408,7 +408,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
                 } //if
             }// for j
 
-            for (int j=i; j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
+            for (int j=i-(skip>0)*(skip-1); j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
                 for (int k=j; k<=i; k++){
 
                     int ind = b+k+j-1;
@@ -433,7 +433,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
                 //printf("(skip %d of %d)", skip, i+1);
             }
 
-            for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
+            for (int j=1; j<=i-(skip>0)*(skip-1); j++){// SMART switch sites for next-nearest neighbour interaction
                 for (int k=i; k>=j; k--){
 
                     int ind = b+k+j-1;
@@ -457,7 +457,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
                 }
             } // for j
 
-            for (int j=i; j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
+            for (int j=i-(skip>0)*(skip-1); j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
                 for (int k=j; k<=i; k++){
 
                     int ind = b+k+j-1;
