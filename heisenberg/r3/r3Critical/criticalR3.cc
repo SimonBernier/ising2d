@@ -173,41 +173,37 @@ double calculateLocalEnergy(int N, int b, MPS psi, std::vector<ITensor> LED, std
 
     for(int i = 1; i<int(size(g)); i++){
 
-        for (int j=i; j>=1; j--){// SMART switch sites for next-nearest neighbour interaction
+        if (b+i+1 <= N){
 
-            int ind = b+j;
+            for (int j=i; j>=1; j--){// switch sites for long-range interaction
 
-            if (ind<N){
-
+                int ind = b+j;
                 psi.position(ind);
                 auto g = BondGate(sites,ind,ind+1);
                 auto AA = psi(ind)*psi(ind+1)*g.gate(); //contract over bond ind
                 AA.replaceTags("Site,1","Site,0");
-                psi.svdBond(g.i1(), AA, Fromleft, {"Cutoff",1E-10}); //svd from the left
+                psi.svdBond(g.i1(), AA, Fromleft); //svd from the left
                 psi.position(g.i1()); //restore orthogonality center to the left
 
-            } //if 
-        } // for j
+            } // for j
 
-        psi.position(b);
-        ket = psi(b)*psi(b+1);
-        energy += g[i]*eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
-                
-        for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
+            psi.position(b);
+            ket = psi(b)*psi(b+1);
+            energy += g[i]*eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
+                    
+            for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
 
-            int ind = b+j;
-
-            if (ind<N){
+                int ind = b+j;
 
                 psi.position(ind);
                 auto g = BondGate(sites,ind,ind+1);
                 auto AA = psi(ind)*psi(ind+1)*g.gate(); //contract over bond ind
                 AA.replaceTags("Site,1","Site,0");
-                psi.svdBond(g.i1(), AA, Fromleft, {"Cutoff",1E-10}); //svd from the left
+                psi.svdBond(g.i1(), AA, Fromleft); //svd from the left
                 psi.position(g.i2()); //move orthogonality center to the right
 
-            } // if
-        } // for j
+            } // for j
+        }// if
     }//for i
 
     return energy;
