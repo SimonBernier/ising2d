@@ -11,11 +11,11 @@ int main(int argc, char *argv[]){
     std::clock_t tStart = std::clock();
 
     int N=16, maxB=512, iRange = 4; // We assume N is even and N/2 is even.
-    double h=0, truncE=1E-10;
+    double h=0., truncE=1E-10;
 
     if(argc > 1)
         N = std::stoi(argv[1]);
-    if(argc > 3)
+    if(argc > 2)
         h = std::stod(argv[2]);  
     
     printfln("N = %d, h = %0.1f", N, h);
