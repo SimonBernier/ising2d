@@ -17,7 +17,7 @@ int main(int argc, char *argv[]){
         runNumber = std::stoi(argv[1]);
     
     int N, method = 2, maxB=512; // We assume N is even and N/2 is even.
-    double T0, h, quenchtau, dt, truncE=1E-10;
+    double T0, h, tau, dt, truncE=1E-10;
     double v = 1.5707963267948966; // pi/2
 
     char schar1[64];
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]){
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
         h = std::stod(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
-        quenchtau = std::stod(parameter);
+        tau = std::stod(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
         truncE = std::stod(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
@@ -45,17 +45,17 @@ int main(int argc, char *argv[]){
     parameter_file.close();
     
     printfln("N = %d, T0 = %0.1f, h = %0.1f, tau = %0.2f, cutoff = %0.1e, max bond dim = %d", 
-                                                            N, T0, h, quenchtau, truncE, maxB);
+                                                            N, T0, h, tau, truncE, maxB);
 
     // We will write into a file with the time-evolved energy density at all times.
     char schar2[128];
     if(method==1){
         int n2 = std::sprintf(schar2,"N_%d_T0_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisHyperbolic_TEBD2.dat"
-                                        ,N,T0,h,quenchtau,truncE,maxB);
+                                        ,N,T0,h,tau,truncE,maxB);
     }
     else if(method==2){
         int n2 = std::sprintf(schar2,"N_%d_T0_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisHyperbolic_TEBD4.dat"
-                                        ,N,T0,h,quenchtau,truncE,maxB);
+                                        ,N,T0,h,tau,truncE,maxB);
     }
     else{
         printfln("Not a valid method");
@@ -106,8 +106,8 @@ int main(int argc, char *argv[]){
     }
 
     //magnetic field vector
-    Real tanhshift = 2.0-T0;
-    std::vector<double> hvals = hvector(N, 0.0, h, v, T0, quenchtau, tanhshift);
+    Real tanhshift = 2.0;
+    std::vector<double> hvals = hvector(N, 0.0, h, v, T0, tau, tanhshift);
     for(int b=1; b<=N; b++){
         ampo += hvals[b-1],"Sz",b;
     }
@@ -143,7 +143,8 @@ int main(int argc, char *argv[]){
         printfln("Starting TEBD4, dt = %0.2f", dt);
     }
     Real tval = 0.0;
-    double finalTime = sqrt( pow(double(N/2)/v,2.0)+ T0*T0) + tanhshift + 4.0*quenchtau;
+    // 0.1*N/c + sqrt( (N/2/c)^2 + T0^2 ) + 2*tau*shift
+    double finalTime = 0.1*double(N)/v + sqrt( pow(0.5*double(N)/v,2.0) + T0*T0) - T0 + 2.0*tau*tanhshift; 
     int nt = int(finalTime/dt)+1;
     auto args = Args("Cutoff=",truncE,"MaxDim=",maxB);
     
@@ -156,7 +157,7 @@ int main(int argc, char *argv[]){
         tval += dt;
 
         //update magnetic field vector
-        hvals = hvector(N, tval, h, v, T0, quenchtau, tanhshift);
+        hvals = hvector(N, tval, h, v, T0, tau, tanhshift);
         
         // TEBD time update
         std::vector<BondGate> gates;
@@ -214,16 +215,16 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
-std::vector<double> hvector(int N, double tval, double h, double v, double T0, double quenchtau, double tanhshift)
+std::vector<double> hvector(int N, double tval, double h, double v, double T0, double tau, double tanhshift)
     {
     std::vector<double> hvals(N);
     for (int b = 1; b <= N; b++){
-        double f = sqrt( pow( (double(b-N/2)-0.5)/v , 2.0)  + T0*T0) - tval + tanhshift;
+        double f = sqrt( pow( (double(b-N/2)-0.5)/v , 2.0)  + T0*T0) - tval - T0;
         if (b%2 == 0){
-            hvals[b-1] = +h*(0.5 + 0.5*tanh( f/quenchtau ));
+            hvals[b-1] = +h*(0.5 + 0.5*tanh( f/tau + tanhshift));
         }
         else{
-            hvals[b-1] = -h*(0.5 + 0.5*tanh( f/quenchtau ));
+            hvals[b-1] = -h*(0.5 + 0.5*tanh( f/tau + tanhshift));
         }
     }
     return hvals;
