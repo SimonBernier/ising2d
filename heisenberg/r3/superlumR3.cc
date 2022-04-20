@@ -169,7 +169,7 @@ int main(int argc, char *argv[]){
     double dt = 0.125;
     double delta1 =  0.414490771794376*dt;
     double delta2 = -0.657963087177503*dt;
-    double finalTime = 0.25*double(N)/1.5707963 + 0.5*double(N)/v + 2.0*tau*tanhshift; // 0.25*N/c + 0.5*N/v + 2*tau*shift
+    double finalTime = 0.1*double(N)/1.5707963 + 0.5*double(N)/v + 2.0*tau*tanhshift; // 0.25*N/c + 0.5*N/v + 2*tau*shift
     int nt = int(finalTime/dt);
 
     auto args = Args("Cutoff=",truncE,"MaxDim=",maxB);
