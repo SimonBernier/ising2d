@@ -1,2 +1,2 @@
 L v h quenchtau truncE maxDim 
-32 1.3 1.0 0.05 1.0e-10 512
+24 1.3 1.0 0.05 1.0e-10 512

@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
     auto en_phi = inner(phi,H,phi);
 
     // store spin-spin correlation function
-    std::vector<Complex> szsz(L,0.0); // local energy density vector
+    std::vector<Complex> szsz(L,0.0);
     //calculate the spin-spin correlation using MPS * MPO * MPS methods
     for(auto j : range1(L)){
       szsz[j-1] = innerC(psi, Sz[j-1], phi);

@@ -18,11 +18,11 @@ int main(int argc, char *argv[]){
     if(argc > 2)
         h = std::stod(argv[2]);  
     
-    printfln("N = %d, h = %0.1f", N, h);
+    printfln("N = %d, h = %0.2f", N, h);
 
     // We will write into a file with the time-evolved energy density at all times.
     char schar1[128];
-    int n1 = std::sprintf(schar1,"N_%d_h_%0.1f_heisR3vCrit.dat", N,h);
+    int n1 = std::sprintf(schar1,"N_%d_h_%0.2f_heisR3vCrit.dat", N,h);
 
     std::string s1(schar1);
     std::ofstream dataFile;
@@ -136,7 +136,7 @@ int main(int argc, char *argv[]){
     dataFile << "t" << " " << "enPhi" << " " << "MaxDimPhi" << " " << "Sz(x,y)Sz(Lx/2,0)" << " " << std::endl;
  
     // time evolution parameters. Get time accuracy of 1E-4
-    double tval = 0.0, tstep = 0.25, dt = 0.125;
+    double tval = 0.0, tstep = 0.1, dt = 0.1;
     double delta1 =  0.414490771794376*dt;
     double delta2 = -0.657963087177503*dt;
     double finalTime = 8.;
