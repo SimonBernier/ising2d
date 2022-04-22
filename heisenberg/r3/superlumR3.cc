@@ -198,6 +198,7 @@ int main(int argc, char *argv[]){
 
         // apply Trotter gates
         gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false});
+        psi.orthogonalize(args); //orthogonalize to minimize bond dimensions
         
         if( n % int(0.25/dt) == 0){
             // calculate energy <psi|Hf|psi>
