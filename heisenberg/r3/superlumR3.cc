@@ -200,28 +200,26 @@ int main(int argc, char *argv[]){
         gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false});
         psi.orthogonalize(args); //orthogonalize to minimize bond dimensions
         
-        if( n % int(0.25/dt) == 0){
-            // calculate energy <psi|Hf|psi>
-            auto en = innerC(psi, Hfinal, psi).real();
-            //calculate entanglement entropy
-            SvN = vonNeumannS(psi, N/2);
-            //calculate local energy <psi|Hf(x)|psi>
-            for(int b=1; b<N; b++){
-                localEnergy[b-1] = calculateLocalEnergy(N, b, psi, LED, g, sites);
-            }
-
-            enerfile << tval << " " << en << " " << SvN << " ";
-            IndexSet bonds = linkInds(psi); //get bond dimensions
-            for (int j = 0; j < N-1; j++){
-                enerfile << dim(bonds[j]) << " ";
-            }
-            for (int j = 0; j < N-1; j++){
-                enerfile << localEnergy[j] << " ";
-            }
-            enerfile << std::endl;
-
-            printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, SvN, maxLinkDim(psi));
+        // calculate energy <psi|Hf|psi>
+        auto en = innerC(psi, Hfinal, psi).real();
+        //calculate entanglement entropy
+        SvN = vonNeumannS(psi, N/2);
+        //calculate local energy <psi|Hf(x)|psi>
+        for(int b=1; b<N; b++){
+            localEnergy[b-1] = calculateLocalEnergy(N, b, psi, LED, g, sites);
         }
+
+        enerfile << tval << " " << en << " " << SvN << " ";
+        IndexSet bonds = linkInds(psi); //get bond dimensions
+        for (int j = 0; j < N-1; j++){
+            enerfile << dim(bonds[j]) << " ";
+        }
+        for (int j = 0; j < N-1; j++){
+            enerfile << localEnergy[j] << " ";
+        }
+        enerfile << std::endl;
+
+        printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, SvN, maxLinkDim(psi));
 
         if( n % int(1.0/dt) == 0){
             //calculate spin-spin correlation
@@ -367,7 +365,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
                 for (int k=i; k>=j; k--){
 
                     int ind = b+k+j-1;
-		    //printf(" sg%d ", ind);
+		            //printf(" sg%d ", ind);
                     gates.push_back( BondGate(sites,ind,ind+1) );
 
                 } // for k
@@ -375,7 +373,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
 
             for (int j=0; j<=i-skip; j++){ //smart ordering of gates
                 //printf(" %d-%d ", b+j, b+j+i+1);
-		int ind = b+2*j;
+		        int ind = b+2*j;
                 auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
                 auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
                 gates.push_back(g);
@@ -385,7 +383,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
                 for (int k=j; k<=i; k++){
 
                     int ind = b+k+j-1;
-		    //printf(" sg%d ", ind);
+		            //printf(" sg%d ", ind);
                     gates.push_back( BondGate(sites,ind,ind+1) );
                 } // for k
             } // for j
@@ -402,14 +400,14 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
             if ( (N-b+1) < 2*(i+1)){
                 skip = (2*(i+1)-(N-b+1))%(i+1);
                 nsg = i+1 - skip;
-		//printf("(skip %d of %d)", skip, i+1);
+		        //printf("(skip %d of %d)", skip, i+1);
             }
 
             for (int j=1; j<=nsg; j++){// SMART switch sites for next-nearest neighbour interaction
                 for (int k=i; k>=j; k--){
 
                     int ind = b+k+j-1;
-		    //printf(" sg%d ", ind);
+		            //printf(" sg%d ", ind);
                     gates.push_back( BondGate(sites,ind,ind+1) );
 
                 } // for k
@@ -420,7 +418,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
                 int ind = b + 2*j;
                 //printf(" %d-%d ", b+j, b+j+i+1);
 
-		auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
+		        auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
                 auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
                 gates.push_back(g);
 

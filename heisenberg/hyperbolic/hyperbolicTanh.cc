@@ -8,6 +8,8 @@ std::vector<double> hvector(int, double, double, double, double, double, double)
 std::vector<BondGate> makeGates(int, std::vector<double>, double, SiteSet, std::vector<ITensor>);
 //calculate Von Neumann entanglement entropy
 Real vonNeumannS(MPS, int);
+//calculate spin-spin correlator
+std::tuple<double, double, double> spinspin(int,int,MPS,SiteSet);
 
 int main(int argc, char *argv[]){
     std::clock_t tStart = std::clock();
@@ -16,7 +18,7 @@ int main(int argc, char *argv[]){
     if(argc > 1)
         runNumber = std::stoi(argv[1]);
     
-    int N, method = 2, maxB=512; // We assume N is even and N/2 is even.
+    int N, maxB=512; // We assume N is even and N/2 is even.
     double T0, h, tau, dt, truncE=1E-10;
     double v = 1.5707963267948966; // pi/2
 
@@ -27,8 +29,6 @@ int main(int argc, char *argv[]){
     std::string parameter;
     if ( parameter_file.is_open() ) { // always check whether the file is open
         std::getline(parameter_file, parameter); //skip header line
-        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
-        method = std::stoi(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
         N = std::stoi(parameter);
         std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
@@ -48,27 +48,26 @@ int main(int argc, char *argv[]){
                                                             N, T0, h, tau, truncE, maxB);
 
     // We will write into a file with the time-evolved energy density at all times.
-    char schar2[128];
-    if(method==1){
-        int n2 = std::sprintf(schar2,"N_%d_T0_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisHyperbolic_TEBD2.dat"
-                                        ,N,T0,h,tau,truncE,maxB);
-    }
-    else if(method==2){
-        int n2 = std::sprintf(schar2,"N_%d_T0_%0.1f_h_%0.1f_qtau_%0.2f_cutoff_%0.1e_maxDim_%d_HeisHyperbolic_TEBD4.dat"
-                                        ,N,T0,h,tau,truncE,maxB);
-    }
-    else{
-        printfln("Not a valid method");
-        return 0;
-    }
-    std::string s2(schar2);
-    std::ofstream enerfile;
+    char schar2[128], schar3[128];
+    int n2 = std::sprintf(schar2,"N_%d_T0_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.0e_maxDim_%d_heisHyperEn.dat"
+                                ,N,T0,h,tau,truncE,maxB);
+    int n3 = std::sprintf(schar3,"N_%d_T0_%0.1f_h_%0.1f_tau_%0.2f_cutoff_%0.0e_maxDim_%d_heisHyperSSC.dat"
+                                ,N,T0,h,tau,truncE,maxB);
+  
+    std::string s2(schar2), s3(schar3);
+    std::ofstream enerfile, sscfile;
     enerfile.open(s2); // opens the file
     if( !enerfile ) { // file couldn't be opened
         std::cerr << "Error: file could not be opened" << std::endl;
         exit(1);
     }
+    sscfile.open(s3); // opens the file
+    if( !sscfile ) { // file couldn't be opened
+        std::cerr << "Error: file could not be opened" << std::endl;
+        exit(1);
+    }
     enerfile << "time" << " " << "energy" << " " << "SvN" << " " << "bondDim" << " " << "localEnergy" << " " << std::endl;
+    sscfile << "time" << " " << "szsz" << " " << "spsm" << " " << "sz" << " " << std::endl;
     
     auto sites = SpinHalf(N);
     auto state = InitState(sites);
@@ -105,6 +104,9 @@ int main(int argc, char *argv[]){
         LED[b-1] += 1.0*sites.op("Sz",b)*sites.op("Sz",b+1);
     }
 
+    // Create the SzSz and S+S- correlation vector
+    std::vector<double> szszcorr(N), spsmcorr(N), expSz(N);
+
     //magnetic field vector
     Real tanhshift = 2.0;
     std::vector<double> hvals = hvector(N, 0.0, h, v, T0, tau, tanhshift);
@@ -123,6 +125,15 @@ int main(int argc, char *argv[]){
         auto ket = psi(b)*psi(b+1);
         localEnergy[b-1] = elt( dag(prime(ket,"Site")) * LED[b-1] * ket);
     }
+    //calculate spin-spin correlation
+    for (int b = 1; b <= N; b++){
+        auto [szsz,spsm,sz] = spinspin(N/2+1,b,psi,sites);
+        szszcorr[b-1] = szsz;
+        spsmcorr[b-1] = spsm;
+        expSz[b-1] = sz;
+    }
+
+    //store variables to energy file
     enerfile << 0.0 << " " << energy << " " << SvN << " ";
     IndexSet bonds = linkInds(psi); //get bond dimensions
     for (int j=0; j<N-1; j++){
@@ -132,20 +143,27 @@ int main(int argc, char *argv[]){
         enerfile << localEnergy[j] << " ";
     }
     enerfile << std::endl;
+    //store variables to spin spin correlation file
+    sscfile << 0.0 << " ";
+    for (int j = 0; j < N; j++){
+        sscfile << szszcorr[j] << " ";
+    }
+    for (int j = 0; j < N; j++){
+        sscfile << spsmcorr[j] << " ";
+    }
+    for (int j = 0; j < N; j++){
+        sscfile << expSz[j] << " ";
+    }
+    sscfile << std::endl;
 
     // time evolution parameters. Get time accuracy of 1E-4
-    if(method == 1){ //2nd order TEBD
-        dt = 0.01;
-        printfln("Starting TEBD2, dt = %0.2f", dt);
-    }
-    else{ //4th order TEBD
-        dt = 0.1;
-        printfln("Starting TEBD4, dt = %0.2f", dt);
-    }
+    dt = 0.1;
+    Real delta1 =  0.414490771794376*dt;
+    Real delta2 = -0.657963087177503*dt;
     Real tval = 0.0;
     // 0.1*N/c + sqrt( (N/2/c)^2 + T0^2 ) + 2*tau*shift
     double finalTime = 0.1*double(N)/v + sqrt( pow(0.5*double(N)/v,2.0) + T0*T0) - T0 + 2.0*tau*tanhshift; 
-    int nt = int(finalTime/dt)+1;
+    int nt = int(finalTime/dt);
     auto args = Args("Cutoff=",truncE,"MaxDim=",maxB);
     
     printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, energy, SvN, maxLinkDim(psi));
@@ -161,54 +179,69 @@ int main(int argc, char *argv[]){
         
         // TEBD time update
         std::vector<BondGate> gates;
-        if(method==1){ // 2nd order TEBD
-            gates = makeGates(N, hvals, dt, sites, LED);
-        }
-        else{ //4th order TEBD
-            Real delta1 =  0.414490771794376*dt;
-            Real delta2 = -0.657963087177503*dt;
-            auto gatesdelta1 = makeGates(N, hvals, delta1, sites, LED);
-            auto gatesdelta2 = makeGates(N, hvals, delta2, sites, LED);
-            gates = gatesdelta1;
-            gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
-            gates.insert(std::end(gates), std::begin(gatesdelta2), std::end(gatesdelta2));
-            gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
-            gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
-        }
+        auto gatesdelta1 = makeGates(N, hvals, delta1, sites, LED);
+        auto gatesdelta2 = makeGates(N, hvals, delta2, sites, LED);
+        gates = gatesdelta1;
+        gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
+        gates.insert(std::end(gates), std::begin(gatesdelta2), std::end(gatesdelta2));
+        gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
+        gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
 
         // apply Trotter gates
         gateTEvol(gates,dt,dt,psi,{args,"Verbose=",false});
         psi.orthogonalize(args); //orthogonalize to minimize bond dimensions
 
-        if( n % int(0.1/dt) == 0){
-            // calculate energy <psi|Hf|psi>
-            auto en = innerC(psi, Hfinal, psi).real();
-            //calculate entanglement entropy
-            SvN = vonNeumannS(psi, N/2);
-            //calculate local energy <psi|Hf(x)|psi>
-            for (int b = 1; b < N; b++){
-                psi.position(b);
-                auto ket = psi(b)*psi(b+1);
-                localEnergy[b-1] = eltC( dag(prime(ket,"Site")) * LED[b-1] * ket ).real();
+        // calculate energy <psi|Hf|psi>
+        auto en = innerC(psi, Hfinal, psi).real();
+        //calculate entanglement entropy
+        SvN = vonNeumannS(psi, N/2);
+        //calculate local energy <psi|Hf(x)|psi>
+        for (int b = 1; b < N; b++){
+            psi.position(b);
+            auto ket = psi(b)*psi(b+1);
+            localEnergy[b-1] = eltC( dag(prime(ket,"Site")) * LED[b-1] * ket ).real();
+        }
+
+        enerfile << tval << " " << en << " " << SvN << " ";
+        IndexSet bonds = linkInds(psi); //get bond dimensions
+        for (int j = 0; j < N-1; j++){
+            enerfile << dim(bonds[j]) << " ";
+        }
+        for (int j = 0; j < N-1; j++){
+            enerfile << localEnergy[j] << " ";
+        }
+        enerfile << std::endl;
+
+        if( n % int(1.0/dt) == 0){
+            //calculate spin-spin correlation
+            for (int b = 1; b <= N; b++){
+                auto [szsz,spsm,sz] = spinspin(N/2+1,b,psi,sites);
+                szszcorr[b-1] = szsz;
+                spsmcorr[b-1] = spsm;
+                expSz[b-1] = sz;
             }
 
-            enerfile << tval << " " << en << " " << SvN << " ";
-            IndexSet bonds = linkInds(psi); //get bond dimensions
-            for (int j = 0; j < N-1; j++){
-                enerfile << dim(bonds[j]) << " ";
+            //store variables to spin spin correlation file
+            sscfile << tval << " ";
+            for (int j = 0; j < N; j++){
+                sscfile << szszcorr[j] << " ";
             }
-            for (int j = 0; j < N-1; j++){
-                enerfile << localEnergy[j] << " ";
+            for (int j = 0; j < N; j++){
+                sscfile << spsmcorr[j] << " ";
             }
-            enerfile << std::endl;
+            for (int j = 0; j < N; j++){
+                sscfile << expSz[j] << " ";
+            }
+            sscfile << std::endl;
 
-            printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, SvN, maxLinkDim(psi));
-        }//if
+        }//if spinspin
+
+        printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, SvN, maxLinkDim(psi));
     }// for n
     
     enerfile.close();
 
-    std::cout<< std::endl << " END PROGRAM. TIME TAKEN :";
+    std::cout<< std::endl << " END PROGRAM. ";
     
     std::printf("Time taken: %.3fs\n", (double)(std::clock() - tStart)/CLOCKS_PER_SEC);
 
@@ -290,3 +323,49 @@ Real vonNeumannS(MPS psi, int b){
     return SvN;
 
 }//vonNeumannS
+
+//calculate spin-spin correlator
+std::tuple<double, double, double> spinspin(int center, int b, MPS psi, SiteSet sites){
+    
+    double corrZ, corrPM, expZ;
+
+    psi.position(b);
+    expZ = eltC(dag(prime(psi(b),"Site")) * sites.op("Sz",b) * psi(b)).real();
+    if(b>center){ //bring site b next to the center from right
+        for(int n=b-1; n>center; n--){
+            auto g = BondGate(sites,n,n+1);
+            auto AA = psi(n)*psi(n+1)*g.gate(); //contract over bond n
+            AA.replaceTags("Site,1","Site,0");
+            psi.svdBond(g.i1(), AA, Fromright); //svd from the right
+            psi.position(g.i1()); //move orthogonality center to the left 
+        }
+        auto ket = psi(center)*psi(center+1);
+        auto SzSz = sites.op("Sz",center)*sites.op("Sz",center+1);
+        auto SpSm = sites.op("S+",center+1)*sites.op("S-",center);
+        corrZ = eltC( dag(prime(ket,"Site")) * SzSz * ket).real();
+        corrPM = eltC( dag(prime(ket,"Site")) * SpSm * ket).real();
+    }
+    else if(b<center){ //bring site b next to the center from left
+        for(int n=b; n<center-1; n++){
+          auto g = BondGate(sites,n,n+1);
+          auto AA = psi(n)*psi(n+1)*g.gate(); //contract over bond n
+          AA.replaceTags("Site,1","Site,0");
+          psi.svdBond(g.i1(), AA, Fromleft); //svd from the right
+          psi.position(g.i2()); //move orthogonality center to the right 
+        }
+        auto ket = psi(center-1)*psi(center);
+        auto SzSz = sites.op("Sz",center-1)*sites.op("Sz",center);
+        auto SpSm = sites.op("S+",center-1)*sites.op("S-",center);
+        corrZ = eltC( dag(prime(ket,"Site")) * SzSz * ket).real();
+        corrPM = eltC( dag(prime(ket,"Site")) * SpSm * ket).real();
+    }
+    else{
+        corrZ = 0.25;
+        auto ket = psi(center);
+        auto SpSm = 0.5*sites.op("Id",center) + sites.op("Sz",center);
+        corrPM = eltC( dag(prime(ket,"Site")) * SpSm * ket).real();
+    }
+
+    return {corrZ, corrPM, expZ};
+
+}//Szsz
