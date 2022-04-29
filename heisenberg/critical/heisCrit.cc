@@ -5,7 +5,7 @@ using namespace itensor;
 //calculate Von Neumann entanglement entropy
 Real vonNeumannS(MPS, int);
 //calculate spin-spin correlator
-std::tuple<double, double> spinspin(int,int,MPS,SiteSet);
+std::tuple<double, double, double> spinspin(int,int,MPS,SiteSet);
 
 int main(int argc, char *argv[]){
     std::clock_t tStart = std::clock();
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]){
         std::cerr << "Error: file could not be opened" << std::endl;
         exit(1);
     }
-    sscfile << "szsz" << " " << "spsm" << " " << std::endl;
+    sscfile << "szsz" << " " << "spsm" << " " << "sz" << " " << std::endl;
     
     auto sites = SpinHalf(N);
     auto state = InitState(sites);
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]){
     }
 
     // Create the SzSz and S+S- correlation vector
-    std::vector<double> szszcorr(N), spsmcorr(N);
+    std::vector<double> szszcorr(N), spsmcorr(N), expSz(N);
     
     // Find Initial Ground State
     auto [energy,psi] = dmrg(H,initState,sweeps,{"Silent=",true});
@@ -98,9 +98,10 @@ int main(int argc, char *argv[]){
 
     //calculate spin-spin correlation
     for (int b = 1; b <= N; b++){
-        auto [szsz,spsm] = spinspin(N/2+1,b,psi,sites);
+        auto [szsz,spsm,sz] = spinspin(N/2+1,b,psi,sites);
         szszcorr[b-1] = szsz;
         spsmcorr[b-1] = spsm;
+        expSz[b-1] = sz;
     }
     //store variables to spin spin correlation file
     for (int j = 0; j < N; j++){
@@ -108,6 +109,9 @@ int main(int argc, char *argv[]){
     }
     for (int j = 0; j < N; j++){
         sscfile << spsmcorr[j] << " ";
+    }
+    for (int j = 0; j < N; j++){
+        sscfile << expSz[j] << " ";
     }
     sscfile << std::endl;
 
@@ -142,11 +146,12 @@ Real vonNeumannS(MPS psi, int b){
 }//vonNeumannS
 
 //calculate spin-spin correlator
-std::tuple<double, double> spinspin(int center, int b, MPS psi, SiteSet sites){
+std::tuple<double, double, double> spinspin(int center, int b, MPS psi, SiteSet sites){
     
-    double corrZ, corrPM;
+    double corrZ, corrPM, expZ;
 
     psi.position(b);
+    expZ = eltC(dag(prime(psi(b),"Site")) * sites.op("Sz",b) * psi(b)).real();
     if(b>center){ //bring site b next to the center from right
         for(int n=b-1; n>center; n--){
             auto g = BondGate(sites,n,n+1);
@@ -182,6 +187,6 @@ std::tuple<double, double> spinspin(int center, int b, MPS psi, SiteSet sites){
         corrPM = eltC( dag(prime(ket,"Site")) * SpSm * ket).real();
     }
 
-    return {corrZ, corrPM};
+    return {corrZ, corrPM, expZ};
 
 }//Szsz
