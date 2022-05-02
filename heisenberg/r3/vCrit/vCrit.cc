@@ -48,12 +48,12 @@ int main(int argc, char *argv[]){
     PrintData(totalQN(initState));
 
     // make vector for interaction strenght depending on range
-    std::vector<double> g(iRange);
+    std::vector<double> J(iRange);
     for (int i = 1; i<=iRange; i++){
         if (i==1)
-            g[0] = 1.0;
+            J[0] = 1.0;
         else
-            g[i-1] = pow( 1./double(i), alpha);
+            J[i-1] = pow( 1./double(i), alpha);
     }
     
     // Create the Target Hamiltonian and find the Ground State Energy Density
@@ -61,9 +61,9 @@ int main(int argc, char *argv[]){
     
     for(int i = 0; i<iRange; i++){
         for (int b = 1; b < N-i; b++){
-            ampo += g[i]*0.5,"S+", b, "S-", b+i+1;
-            ampo += g[i]*0.5,"S-", b, "S+", b+i+1;
-            ampo += g[i]*1.0,"Sz", b, "Sz", b+i+1;
+            ampo += J[i]*0.5,"S+", b, "S-", b+i+1;
+            ampo += J[i]*0.5,"S-", b, "S+", b+i+1;
+            ampo += J[i]*1.0,"Sz", b, "Sz", b+i+1;
         }
     }
     if(h!=0){ //on-site field
@@ -146,8 +146,8 @@ int main(int argc, char *argv[]){
     auto hvals = hvector(N, h);
 
     std::vector<BondGate> gates;
-    auto gatesdelta1 = makeGates(N, hvals, delta1, sites, LED, g);
-    auto gatesdelta2 = makeGates(N, hvals, delta2, sites, LED, g);
+    auto gatesdelta1 = makeGates(N, hvals, delta1, sites, LED, J);
+    auto gatesdelta2 = makeGates(N, hvals, delta2, sites, LED, J);
     gates = gatesdelta1;
     gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
     gates.insert(std::end(gates), std::begin(gatesdelta2), std::end(gatesdelta2));
@@ -210,7 +210,7 @@ std::vector<double> hvector(int N, double h)
 
 // second order Trotter breakup of time step dt
 // returns a vector of gates to pass to function gateTEvol
-std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet sites, std::vector<ITensor> LED, std::vector<double> g)
+std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet sites, std::vector<ITensor> LED, std::vector<double> J)
     {
 
     std::vector<BondGate> gates;
@@ -232,23 +232,23 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
         }// if
     }// for b
 
-    for(int i = 1; i<int(size(g)); i++){ //long-range
+    for(int i = 1; i<int(size(J)); i++){ //long-range
         //printfln("\ninteraction range %d", i+1);
 
-        for( int b=1; b<N-i; b+=i+1){
+	for( int b=1; b<N-i; b+=i+1){
 
-            int skip=0, nsg=i;
-            if ( (N-b+1) < 2*(i+1)){
-                skip = (2*(i+1)-(N-b+1))%(i+1);
-                nsg = i+1 - skip;
-                //printf("(skip %d of %d)", skip, i+1);
-            }
+	    int skip=0, nsg=i;
+	    if ( (N-b+1) < 2*(i+1)){
+		skip = (2*(i+1)-(N-b+1))%(i+1);
+		nsg = i+1 - skip;
+		//printf("(skip %d of %d)", skip, i+1);
+	    }
 
             for (int j=1; j<=nsg; j++){// SMART switch sites for next-nearest neighbour interaction
                 for (int k=i; k>=j; k--){
 
                     int ind = b+k+j-1;
-                    //printf(" sg%d ", ind);
+		            //printf(" sg%d ", ind);
                     gates.push_back( BondGate(sites,ind,ind+1) );
 
                 } // for k
@@ -256,8 +256,8 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
 
             for (int j=0; j<=i-skip; j++){ //smart ordering of gates
                 //printf(" %d-%d ", b+j, b+j+i+1);
-                int ind = b+2*j;
-                auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
+		        int ind = b+2*j;
+                auto hterm = J[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
                 auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
                 gates.push_back(g);
             }// for j
@@ -266,7 +266,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
                 for (int k=j; k<=i; k++){
 
                     int ind = b+k+j-1;
-                    //printf(" sg%d ", ind);
+		            //printf(" sg%d ", ind);
                     gates.push_back( BondGate(sites,ind,ind+1) );
                 } // for k
             } // for j
@@ -274,16 +274,16 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
     } // for i
 
     //Create the gates exp(-i*tstep/2*hterm) in reverse order
-    for(int i = int(size(g))-1; i>=1; i--){ //long-range
+    for(int i = int(size(J))-1; i>=1; i--){ //long-range
         //printfln("\ninteraction range %d", i+1);
 
         for(int b=1+(i+1)*((N-1)/(i+1)-1); b>=1; b-=i+1){
 
-            int skip=0, nsg=i;
+	    int skip=0, nsg=i;
             if ( (N-b+1) < 2*(i+1)){
                 skip = (2*(i+1)-(N-b+1))%(i+1);
                 nsg = i+1 - skip;
-                //printf("(skip %d of %d)", skip, i+1);
+		        //printf("(skip %d of %d)", skip, i+1);
             }
 
             for (int j=1; j<=nsg; j++){// SMART switch sites for next-nearest neighbour interaction
@@ -301,7 +301,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
                 int ind = b + 2*j;
                 //printf(" %d-%d ", b+j, b+j+i+1);
 
-		        auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
+		        auto hterm = J[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
                 auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
                 gates.push_back(g);
 

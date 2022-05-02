@@ -10,6 +10,6 @@ let "runNumber = $(( runNumber + 1 ))"
 echo " "
 echo "$str $runNumber"
 
-./vCrit 64 $i
+./vCrit 65 $i
 
 done

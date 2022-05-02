@@ -8,6 +8,8 @@ std::vector<double> hvector(int, double, double, double, double, double);
 double calculateLocalEnergy(int, int, MPS, std::vector<ITensor>, std::vector<double>, SiteSet);
 //makes gates to pass to function gateTEvol
 std::vector<BondGate> makeGates(int, std::vector<double>, double, SiteSet, std::vector<ITensor>, std::vector<double>);
+// update time dependent gates
+void updateGates(int, std::vector<BondGate>&, std::vector<double>, double, SiteSet, std::vector<ITensor>, std::vector<double>);
 //calculate Von Neumann entanglement entropy
 Real vonNeumannS(MPS, int);
 //calculate spin-spin correlator
@@ -21,8 +23,7 @@ int main(int argc, char *argv[]){
         runNumber = std::stoi(argv[1]);
     
     int N, maxB=512, iRange = 4; // We assume N is even and N/2 is even.
-    double v, h, tau, truncE=1E-10;
-    double tanhshift = 2.0;
+    double v, h, tau, truncE=1E-10, alpha = 3.0, tanhshift = 2.0;
 
     char schar1[64];
     int n1 = std::sprintf(schar1, "parameters_run%d.txt",runNumber);
@@ -84,12 +85,12 @@ int main(int argc, char *argv[]){
     PrintData(totalQN(initState));
 
     // make vector for interaction strenght depending on range
-    std::vector<double> g(iRange);
+    std::vector<double> J(iRange);
     for (int i = 1; i<=iRange; i++){
         if (i==1)
-            g[0] = 1.0;
+            J[0] = 1.0;
         else
-            g[i-1] = pow( 1./double(i), 3.);
+            J[i-1] = pow( 1./double(i), alpha);
     }
     
     // Create the Target Hamiltonian and find the Ground State Energy Density
@@ -97,9 +98,9 @@ int main(int argc, char *argv[]){
     
     for(int i = 0; i<iRange; i++){
         for (int b = 1; b < N-i; b++){
-            ampo += g[i]*0.5,"S+", b, "S-", b+i+1;
-            ampo += g[i]*0.5,"S-", b, "S+", b+i+1;
-            ampo += g[i]*1.0,"Sz", b, "Sz", b+i+1;
+            ampo += J[i]*0.5,"S+", b, "S-", b+i+1;
+            ampo += J[i]*0.5,"S-", b, "S+", b+i+1;
+            ampo += J[i]*1.0,"Sz", b, "Sz", b+i+1;
         }
     }
     auto Hfinal = toMPO(ampo);
@@ -136,7 +137,7 @@ int main(int argc, char *argv[]){
     IndexSet bonds = linkInds(psi); 
     //calculate local energy <psi|Hf(x)|psi>
     for(int b=1; b<N; b++){
-        localEnergy[b-1] = calculateLocalEnergy(N, b, psi, LED, g, sites);
+        localEnergy[b-1] = calculateLocalEnergy(N, b, psi, LED, J, sites);
     }
     //calculate spin-spin correlation
     for (int b = 1; b <= N; b++){
@@ -180,6 +181,9 @@ int main(int argc, char *argv[]){
     
     printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, energy, SvN, maxLinkDim(psi));
 
+    auto gatesdelta1 = makeGates(N, hvals, delta1, sites, LED, J);
+    auto gatesdelta2 = makeGates(N, hvals, delta2, sites, LED, J);
+
     ////////////////////
     // TIME EVOLUTION //
     ////////////////////
@@ -187,13 +191,13 @@ int main(int argc, char *argv[]){
 
         tval += dt;
 
-        //update magnetic field vector
+        //update h field
         hvals = hvector(N, tval, h, v, tau, tanhshift);
 
-        std::vector<BondGate> gates;
-
-        auto gatesdelta1 = makeGates(N, hvals, delta1, sites, LED, g);
-        auto gatesdelta2 = makeGates(N, hvals, delta2, sites, LED, g);
+        //make gates
+        std::vector<BondGate> gates;    
+        updateGates(N, gatesdelta1, hvals, delta1, sites, LED, J);
+        updateGates(N, gatesdelta2, hvals, delta2, sites, LED, J);
         gates = gatesdelta1;
         gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
         gates.insert(std::end(gates), std::begin(gatesdelta2), std::end(gatesdelta2));
@@ -210,7 +214,7 @@ int main(int argc, char *argv[]){
         SvN = vonNeumannS(psi, N/2);
         //calculate local energy <psi|Hf(x)|psi>
         for(int b=1; b<N; b++){
-            localEnergy[b-1] = calculateLocalEnergy(N, b, psi, LED, g, sites);
+            localEnergy[b-1] = calculateLocalEnergy(N, b, psi, LED, J, sites);
         }
 
         enerfile << tval << " " << en << " " << SvN << " ";
@@ -223,7 +227,7 @@ int main(int argc, char *argv[]){
         }
         enerfile << std::endl;
 
-        printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, SvN, maxLinkDim(psi));
+        printfln("t = %0.3f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, SvN, maxLinkDim(psi));
 
         if( n % int(1.0/dt) == 0){
             //calculate spin-spin correlation
@@ -286,7 +290,7 @@ std::vector<double> hvector(int N, double tval, double h, double v, double tau, 
 }
 
 //calculate local energy density and return a vector of doubles
-double calculateLocalEnergy(int N, int b, MPS psi, std::vector<ITensor> LED, std::vector<double> g, SiteSet sites){
+double calculateLocalEnergy(int N, int b, MPS psi, std::vector<ITensor> LED, std::vector<double> J, SiteSet sites){
     
     double energy;
 
@@ -294,7 +298,7 @@ double calculateLocalEnergy(int N, int b, MPS psi, std::vector<ITensor> LED, std
     auto ket = psi(b)*psi(b+1);
     energy = eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
 
-    for(int i = 1; i<int(size(g)); i++){
+    for(int i = 1; i<int(size(J)); i++){
 
         if (b+i+1 <= N){
 
@@ -312,7 +316,7 @@ double calculateLocalEnergy(int N, int b, MPS psi, std::vector<ITensor> LED, std
 
             psi.position(b);
             ket = psi(b)*psi(b+1);
-            energy += g[i]*eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
+            energy += J[i]*eltC( dag(prime(ket,"Site")) * LED[b-1] * ket).real();
                     
             for (int j=1; j<=i; j++){// SMART switch sites for next-nearest neighbour interaction
 
@@ -335,7 +339,7 @@ double calculateLocalEnergy(int N, int b, MPS psi, std::vector<ITensor> LED, std
 
 // second order Trotter breakup of time step dt
 // returns a vector of gates to pass to function gateTEvol
-std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet sites, std::vector<ITensor> LED, std::vector<double> g)
+std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet sites, std::vector<ITensor> LED, std::vector<double> J)
     {
 
     std::vector<BondGate> gates;
@@ -357,7 +361,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
         }// if
     }// for b
 
-    for(int i = 1; i<int(size(g)); i++){ //long-range
+    for(int i = 1; i<int(size(J)); i++){ //long-range
         //printfln("\ninteraction range %d", i+1);
 
 	for( int b=1; b<N-i; b+=i+1){
@@ -382,7 +386,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
             for (int j=0; j<=i-skip; j++){ //smart ordering of gates
                 //printf(" %d-%d ", b+j, b+j+i+1);
 		        int ind = b+2*j;
-                auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
+                auto hterm = J[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
                 auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
                 gates.push_back(g);
             }// for j
@@ -399,7 +403,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
     } // for i
 
     //Create the gates exp(-i*tstep/2*hterm) in reverse order
-    for(int i = int(size(g))-1; i>=1; i--){ //long-range
+    for(int i = int(size(J))-1; i>=1; i--){ //long-range
         //printfln("\ninteraction range %d", i+1);
 
         for(int b=1+(i+1)*((N-1)/(i+1)-1); b>=1; b-=i+1){
@@ -426,7 +430,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
                 int ind = b + 2*j;
                 //printf(" %d-%d ", b+j, b+j+i+1);
 
-		        auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
+		        auto hterm = J[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
                 auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
                 gates.push_back(g);
 
@@ -461,6 +465,102 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
   return gates;
 
 }// makeGates
+
+// update time dependent gates
+void updateGates(int N, std::vector<BondGate>& gates, std::vector<double> h, 
+                                  double dt, SiteSet sites, std::vector<ITensor> LED, std::vector<double> J)
+    {
+
+    int indG=0;
+
+    //Create the gates exp(-i*tstep/2*hterm)
+    for(int b=1; b<=N; b++){
+        if(b<N){ //nearest neighbour
+
+            auto hterm = LED[b-1];
+            hterm += h[b-1]*op(sites,"Sz",b)*op(sites,"Id",b+1);
+            auto g = BondGate(sites,b,b+1,BondGate::tReal,dt/2.,hterm);
+            gates[indG] = g;
+            indG++;
+        }
+        else{
+
+            auto hterm = h[b-1]*op(sites,"Id",b-1)*op(sites,"Sz",b);
+            auto g = BondGate(sites,b-1,b,BondGate::tReal,dt/2.,hterm);
+            gates[indG] = g;
+            indG++;
+        }// if
+    }// for b
+
+    for(int i = 1; i<int(size(J)); i++){ //long-range
+
+        for( int b=1; b<N-i; b+=i+1){
+
+            int skip=0;
+            if ( (N-b+1) < 2*(i+1)){
+                skip = (2*(i+1)-(N-b+1))%(i+1);
+            }
+            indG += (i+1-skip)*(i+skip)/2;
+
+            for (int j=0; j<=i-skip; j++){ //smart ordering of gates
+		        int ind = b+2*j;
+                auto hterm = J[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
+                auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
+                gates[indG] = g;
+                indG++;
+            }// for j
+
+            indG += (i+1-skip)*(i+skip)/2;
+
+        } //for b
+    } // for i
+
+    //Create the gates exp(-i*tstep/2*hterm) in reverse order
+    for(int i = int(size(J))-1; i>=1; i--){ //long-range
+        //printfln("\ninteraction range %d", i+1);
+
+        for(int b=1+(i+1)*((N-1)/(i+1)-1); b>=1; b-=i+1){
+
+	        int skip=0;
+            if ( (N-b+1) < 2*(i+1)){
+                skip = (2*(i+1)-(N-b+1))%(i+1);
+            }
+            indG += (i+1-skip)*(i+skip)/2;
+
+            for (int j=i-skip; j>=0; j--){ //smart ordering of gates
+
+                int ind = b + 2*j;
+		        auto hterm = J[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
+                auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
+                gates[indG] = g;
+                indG++;
+
+            } // for j
+
+            indG += (i+1-skip)*(i+skip)/2;
+
+        } //for b
+    }// for i
+
+    for(int b=N; b>=1; b--){ // nearest-neighbour
+        if(b<N){
+            auto hterm = LED[b-1];
+            hterm += h[b-1]*op(sites,"Sz",b)*op(sites,"Id",b+1);
+            auto g = BondGate(sites,b,b+1,BondGate::tReal,dt/2.,hterm);
+            gates[indG] = g;
+            indG++;
+        }
+        else{
+            auto hterm = h[b-1]*op(sites,"Id",b-1)*op(sites,"Sz",b);
+            auto g = BondGate(sites,b-1,b,BondGate::tReal,dt/2.,hterm);
+            gates[indG] = g;
+            indG++;
+        }
+    }// for b
+
+    return;
+
+}// updateGates
 
 //calculate entanglement
 Real vonNeumannS(MPS psi, int b){
