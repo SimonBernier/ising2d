@@ -11,7 +11,7 @@ int main(int argc, char *argv[]){
     std::clock_t tStart = std::clock();
 
     int N=16, maxB=512, iRange = 4; // We assume N is even and N/2 is even.
-    double h=0., truncE=1E-10;
+    double h=0., truncE=1E-10, alpha = 3.;
 
     if(argc > 1)
         N = std::stoi(argv[1]);
@@ -34,7 +34,7 @@ int main(int argc, char *argv[]){
     
     //make header for t=0 calculations
     dataFile << "t=0" << " " << "enPsi" << " " << "MaxDimPsi" << " " << "enPhi" << " " << "MaxDimPhi" << " " 
-             << "Sz(x,y)Sz(Lx/2,0)" << " " << std::endl;
+             << "Sz(x,y)Sz(N/2+1,0)" << " " << std::endl;
     
     auto sites = SpinHalf(N);
     auto state = InitState(sites);
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]){
         if (i==1)
             g[0] = 1.0;
         else
-            g[i-1] = pow( 1./double(i), 3.);
+            g[i-1] = pow( 1./double(i), alpha);
     }
     
     // Create the Target Hamiltonian and find the Ground State Energy Density
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]){
     //sweeps
     auto sweeps = Sweeps(5); //number of sweeps is 5
     sweeps.maxdim() = 10,20,50,100,200; //gradually increase states kept
-    sweeps.cutoff() = 1E-10; //desired truncation error
+    sweeps.cutoff() = truncE; //desired truncation error
     sweeps.noise() = 1E-7, 1E-8, 0;
 
     // Create the Local Energy Density Tensors
@@ -109,15 +109,15 @@ int main(int argc, char *argv[]){
     // Find Initial Ground State
     auto [en_psi,psi] = dmrg(H,initState,sweeps,{"Silent=",true});
 
-    // make |phi> = Sz|psi>
-    int loc = N/4; //centered in x and on lower row in y
+    // make |phi> = sigma_z|psi>
+    int loc = N/2+1; //centered in the middle of the chain
     psi.position(loc);
     auto newA = 2.0*sites.op("Sz",loc)*psi(loc);
     newA.noPrime();
     auto phi = psi;
     phi.set(loc, newA);
+    phi.orthogonalize({"Cutoff=",truncE,"MaxDim=",maxB});
     auto en_phi = innerC(phi,H,phi).real();
-    
 
     //calculate the spin-spin correlation using MPS * MPO * MPS methods
     for(auto j : range1(N)){
@@ -235,20 +235,20 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
     for(int i = 1; i<int(size(g)); i++){ //long-range
         //printfln("\ninteraction range %d", i+1);
 
-	for( int b=1; b<N-i; b+=i+1){
+        for( int b=1; b<N-i; b+=i+1){
 
-	    int skip=0, nsg=i;
-	    if ( (N-b+1) < 2*(i+1)){
-		skip = (2*(i+1)-(N-b+1))%(i+1);
-		nsg = i+1 - skip;
-		//printf("(skip %d of %d)", skip, i+1);
-	    }
+            int skip=0, nsg=i;
+            if ( (N-b+1) < 2*(i+1)){
+                skip = (2*(i+1)-(N-b+1))%(i+1);
+                nsg = i+1 - skip;
+                //printf("(skip %d of %d)", skip, i+1);
+            }
 
             for (int j=1; j<=nsg; j++){// SMART switch sites for next-nearest neighbour interaction
                 for (int k=i; k>=j; k--){
 
                     int ind = b+k+j-1;
-		    //printf(" sg%d ", ind);
+                    //printf(" sg%d ", ind);
                     gates.push_back( BondGate(sites,ind,ind+1) );
 
                 } // for k
@@ -256,7 +256,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
 
             for (int j=0; j<=i-skip; j++){ //smart ordering of gates
                 //printf(" %d-%d ", b+j, b+j+i+1);
-		int ind = b+2*j;
+                int ind = b+2*j;
                 auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
                 auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
                 gates.push_back(g);
@@ -266,7 +266,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
                 for (int k=j; k<=i; k++){
 
                     int ind = b+k+j-1;
-		    //printf(" sg%d ", ind);
+                    //printf(" sg%d ", ind);
                     gates.push_back( BondGate(sites,ind,ind+1) );
                 } // for k
             } // for j
@@ -279,18 +279,18 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
 
         for(int b=1+(i+1)*((N-1)/(i+1)-1); b>=1; b-=i+1){
 
-	    int skip=0, nsg=i;
+            int skip=0, nsg=i;
             if ( (N-b+1) < 2*(i+1)){
                 skip = (2*(i+1)-(N-b+1))%(i+1);
                 nsg = i+1 - skip;
-		//printf("(skip %d of %d)", skip, i+1);
+                //printf("(skip %d of %d)", skip, i+1);
             }
 
             for (int j=1; j<=nsg; j++){// SMART switch sites for next-nearest neighbour interaction
                 for (int k=i; k>=j; k--){
 
                     int ind = b+k+j-1;
-		    //printf(" sg%d ", ind);
+		            //printf(" sg%d ", ind);
                     gates.push_back( BondGate(sites,ind,ind+1) );
 
                 } // for k
@@ -301,7 +301,7 @@ std::vector<BondGate> makeGates(int N, std::vector<double> h, double dt, SiteSet
                 int ind = b + 2*j;
                 //printf(" %d-%d ", b+j, b+j+i+1);
 
-		auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
+		        auto hterm = g[i]*LED[ind-1]; //time evolve sites b+j, b+j+i+1
                 auto g = BondGate(sites,ind,ind+1,BondGate::tReal,dt/2.,hterm);
                 gates.push_back(g);
 

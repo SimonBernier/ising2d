@@ -4,12 +4,12 @@ set=("$@")
 str="Starting run number"
 runNumber=0
 
-for i in $(seq 0.0 0.05 0.2);
+for i in $(seq 0.15 0.05 1.0);
 do
 let "runNumber = $(( runNumber + 1 ))"
 echo " "
 echo "$str $runNumber"
 
-./vCrit 64 $i
+./vCrit 65 $i
 
 done
