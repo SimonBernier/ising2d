@@ -2,40 +2,24 @@
 
 using namespace itensor;
 
-int main(int argc, char *argv[])
-    {
-    
-    int runNumber = 0;
-    if(argc > 1)
-        runNumber = std::stoi(argv[1]);
-    
-    int Ly, Lx;
-    double h, lambda;
+int main(int argc, char *argv[]){
+    std::clock_t tStart = std::clock();
 
-    std::ifstream parameter_file ("parameter_list.txt");
-    std::string parameter;
-    int temp = 0;
-    if ( parameter_file.is_open() ) { // always check whether the file is open
-        while(temp<=runNumber){ //skip the appropriate number of lines
-            std::getline(parameter_file, parameter);
-            temp += 1;
-        } 
-        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
-        Ly = std::stoi(parameter);
-        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
-        Lx = std::stoi(parameter);
-        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
-        h = std::stod(parameter);
-        std::getline(parameter_file, parameter, ' '); // pipe file's content into stream
-        lambda = std::stod(parameter);
-    }
-    parameter_file.close();
+    int Lx=16, Ly=3;
+    double h=1.;
+
+    if(argc > 2)
+        Lx = std::stoi(argv[2]);
+    if(argc > 3)
+        Ly = std::stoi(argv[3]);
+    if(argc > 4)
+        h = std::stod(argv[4]);   
     
-    printfln("Ly = %d, Lx = %d, h = %0.3f, lambda = %0.1f", Ly, Lx, h, lambda);
+    printfln("Ly = %d, Lx = %d, h = %0.2f", Ly, Lx, h);
 
     //write results to file
     char schar1[64];
-    int n1 = std::sprintf(schar1,"Ly_%d_Lx_%d_h_%0.3f_lambda_%0.1f_2dTFI_gap.dat",Ly,Lx,h,lambda);
+    int n1 = std::sprintf(schar1,"Ly_%d_Lx_%d_h_%0.2f_2dTFI_gap.dat",Ly,Lx,h);
     std::string s1(schar1);
     std::ofstream dataFile;
     dataFile.open(s1); // opens the file
@@ -43,51 +27,30 @@ int main(int argc, char *argv[])
         std::cerr << "Error: file could not be opened" << std::endl;
         exit(1);
     }
-    dataFile << "en0" << " " << "p0" << " " << "var0" << " " << "maxBondDim0" << " "
-             << "en1" << " " << "p1" << " " << "var1" << " " << "maxBondDim1" << " " << std::endl;
+    dataFile << "en0" << " " << "var0" << " " << "maxBondDim0" << " "
+             << "en1" << " " << "var1" << " " << "maxBondDim1" << " " << std::endl;
 
     auto N = Lx * Ly;
-    auto sites = SpinHalf(N,{"ConserveSz=",false});
+    auto sites = SpinHalf(N,{"ConserveQNs=",false,"ConserveParity=",true});
 
     auto ampo = AutoMPO(sites);
     auto lattice = squareLattice(Lx, Ly, {"YPeriodic = ", true});
     
     // autompo hamiltonian
     for(auto j : lattice){
-        ampo += -4.0, "Sz", j.s1, "Sz", j.s2;
+        ampo += -4.0, "Sx", j.s1, "Sx", j.s2;
     }
     for(auto j : range1(N)){
-        ampo += -2.0*h, "Sx", j;
+        ampo += -2.0*h, "Sz", j;
     }    
+    auto H = toMPO(ampo);
 
-    // make parity operator
-    auto P = MPO(sites);
-    for(auto j : range1(N)){
-        if(j==1){
-            auto Pj = P(j);
-            Pj.set(1,1,1, 0.0);
-            Pj.set(1,2,1, 1.0);
-            Pj.set(2,1,1, 1.0);
-            Pj.set(2,2,1, 0.0);
-            P.set(j,Pj);
-        }
-        else if(1<j && j<N){
-            auto Pj = P(j);
-            Pj.set(1,1,1,1, 0.0);
-            Pj.set(1,2,1,1, 1.0);
-            Pj.set(2,1,1,1, 1.0);
-            Pj.set(2,2,1,1, 0.0);
-            P.set(j,Pj);
-        }
-        else if(j==N){
-            auto Pj = P(j);
-            Pj.set(1,1,1, 0.0);
-            Pj.set(1,2,1, 1.0);
-            Pj.set(2,1,1, 1.0);
-            Pj.set(2,2,1, 0.0);
-            P.set(j,Pj);
-        }        
+    auto state = InitState(sites);
+    for(int i = 1; i <= N; i++){
+        state.set(i,"Up");
     }
+    auto initState = MPS(state);
+    PrintData(totalQN(initState));
 
     // 2d ising model parameters
     auto sweeps = Sweeps(15);
@@ -98,34 +61,32 @@ int main(int argc, char *argv[])
     //
     //solve for ground state
     //
-    auto H = toMPO(ampo);
-    auto HP = H.plusEq(-lambda*P);
-    auto [en0,psi0] = dmrg(HP,randomMPS(sites),sweeps,{"Silent=",true});
-    en0 = inner(psi0,H,psi0);
-    auto var = inner(psi0,H,H,psi0)-en0*en0;
+    auto [en0,psi0] = dmrg(H,initState,sweeps,{"Silent=",true});
+    auto var = inner(H,psi0,H,psi0) - en0*en0;
     auto maxBondDim = maxLinkDim(psi0);
-    auto p0 = inner(psi0,P,psi0);
     println("\nfirst state");
-    printfln("Energy = %0.3f, parity = %0.3f, maxLinkDim = %d, var = %0.3g", en0, p0, maxBondDim, var);
+    printfln("Energy = %0.3f, var = %0.3g, maxLinkDim = %d", en0, var, maxBondDim);
 
-    dataFile << en0 << " " << p0 << " " << var << " " << maxBondDim << " ";
+    dataFile << en0 << " " << var << " " << maxBondDim << " ";
 
     //
-    // excited state for FM regime, second ES for PM regime
+    // excited state
     //
     auto wfs = std::vector<MPS>(1);
     wfs.at(0) = psi0;
-    auto [en1,psi1] = dmrg(HP,wfs,randomMPS(sites),sweeps,{"Silent=",true,"Weight=",20.0});
-    en1 = inner(psi1,H,psi1);
-    var = inner(psi1,H,H,psi1)-en1*en1;
+    auto [en1,psi1] = dmrg(H,wfs,initState,sweeps,{"Silent=",true,"Weight=",20.0});
+    var = inner(H,psi1,H,psi1) - en1*en1;
     maxBondDim = maxLinkDim(psi1);
-    auto p1 = inner(psi1,P,psi1);
-    println("\nsecond state");
-    printfln("Energy = %0.3f, parity = %0.3f, maxLinkDim = %d, var = %0.3g", en1, p1, maxBondDim, var);
 
-    dataFile << en1 << " " << p1 << " " << var << " " << maxBondDim << " ";
+    println("\nsecond state");
+    printfln("Energy = %0.3f, var = %0.3g, maxLinkDim = %d", en1, var, maxBondDim);
+
+    dataFile << en1 << " " << var << " " << maxBondDim << " ";
 
     dataFile.close();
+
+    print(" END OF PROGRAM. ");
+    printf("Time taken: %.3fs\n", (double)(std::clock() - tStart)/CLOCKS_PER_SEC);
 
     return 0;
 }// runPT

@@ -1,0 +1,5 @@
+make --dry-run --keep-going --print-directory
+make: Entering directory '/root/ising2d/gap'
+make: Nothing to be done for 'build'.
+make: Leaving directory '/root/ising2d/gap'
+ 

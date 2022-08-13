@@ -4,12 +4,12 @@ set=("$@")
 str="Starting run number"
 runNumber=0
 
-for i in $(seq 0 1 139);
+for i in $(seq 1.5 0.01 3);
 do
 let "runNumber = $(( runNumber + 1 ))"
 echo " "
 echo "$str $runNumber"
 
-./gap-2dtfi $i
+./gap_2dtfi 64 2 $i
 
 done
