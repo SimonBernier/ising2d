@@ -86,7 +86,7 @@ int main(int argc, char *argv[]){
 
     printfln("\nIteration %d, time = %0.2f; phi energy = %0.f, max link dim is %d",0,0, en_phi,maxLinkDim(phi));
     // store to file
-    dataFile << 0.0 << " " << en_psi << " " << maxLinkDim(psi) << " " << en_phi << " " << maxLinkDim(phi) << " ";
+    dataFile << 0.0 << " " << en_psi << " " << en_phi << " ";
     for(int j = 0; j<Lx-1; j++){ //save svn
         dataFile << svn[j] << " ";
     }
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]){
         bonds = linkInds(phi); //get bond dimensions
 
         //write to file
-        dataFile << tval << " " << en_phi << " " << maxLinkDim(phi) << " ";
+        dataFile << tval << " " << en_phi << " " ;
         for(int j = 0; j<Lx-1; j++){ //save svn
             dataFile << svn[j] << " ";
         }
