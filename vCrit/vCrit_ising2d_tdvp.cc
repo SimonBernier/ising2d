@@ -34,8 +34,7 @@ int main(int argc, char *argv[]){
         exit(1);
     }
     //make header for t=0 calculations
-    dataFile << "t=0" << " " << "enPsi" << " " << "MaxDimPsi" << " " << "enPhi" << " " << "MaxDimPhi" << " " 
-             << "SvN(x,t=0)" << " " << std::endl;
+    dataFile << "t=0" << " " << "enPsi" << " " << "enPhi" << " " << "SvN(x,t=0)" << " " << "bondDim" << " " << std::endl;
 
     auto L = Ly * Lx;
     auto sites = SpinHalf(L,{"ConserveQNs=",false,"ConserveParity",true});
@@ -60,9 +59,9 @@ int main(int argc, char *argv[]){
 
     // 2d ising model parameters
     auto sweeps = Sweeps(15);
-    sweeps.maxdim() = 10, 20, 100, 100, 200, 200, 400, 400, 512;
-    sweeps.cutoff() = 1E-10;
-    sweeps.noise() = 1E-7,1E-8,0.0;
+    sweeps.maxdim() = 10, 20, 50, maxB;
+    sweeps.cutoff() = truncE;
+    sweeps.noise() = 1E-7, 1E-8, 0., 1E-7, 1E-8, 1E-9, 1E-10, 0.;
 
     // calculate ground state
     auto [en_psi,psi] = dmrg(H,initState,sweeps,{"Silent=",true});
@@ -82,6 +81,8 @@ int main(int argc, char *argv[]){
         auto b = i*Ly;
         svn[i-1] = vonNeumannS(phi, b);
     }
+    auto bonds = linkInds(phi); //get bond dimensions
+
 
     printfln("\nIteration %d, time = %0.2f; phi energy = %0.f, max link dim is %d",0,0, en_phi,maxLinkDim(phi));
     // store to file
@@ -89,13 +90,16 @@ int main(int argc, char *argv[]){
     for(int j = 0; j<Lx-1; j++){ //save svn
         dataFile << svn[j] << " ";
     }
+    for (int j=0; j<L-1; j++){
+        dataFile << dim(bonds[j]) << " ";
+    }
     dataFile << std::endl;
 
-    dataFile << "tval" << " " << "enPhi" << " " << "MaxDimPhi" << " " << "SvN(x,t)" << " " << std::endl;
+    dataFile << "tval" << " " << "enPhi" << " " << "SvN(x,t)" << " " << "bondDim" << " " << std::endl;
 
     // time evolution parameters
     double tval = 0.0; //time
-    double ttotal = 2.0;
+    double ttotal = 8.0;
     Real dt = 0.1; //time step
     int Nt = int(ttotal/dt); //number of time steps
     Real delta1 =  0.414490771794376*dt; // 4th order time stepping
@@ -107,11 +111,11 @@ int main(int argc, char *argv[]){
     auto sweeps1 = Sweeps(2); //two forward time steps of delta1
     sweeps1.maxdim() = maxB;
     sweeps1.cutoff() = truncE;
-    sweeps1.niter() = 10;
+    sweeps1.niter() = 15;
     auto sweeps2 = Sweeps(1); //one backward time step of delta2
     sweeps2.maxdim() = maxB;
     sweeps2.cutoff() = truncE;
-    sweeps2.niter() = 10;
+    sweeps2.niter() = 15;
 
     printfln("\nStarting fourth order 2-site TDVP, dt = %0.2f\n", dt);
 
@@ -130,18 +134,21 @@ int main(int argc, char *argv[]){
             auto b = i*Ly;
             svn[i-1] = vonNeumannS(phi, b);
         }
+        bonds = linkInds(phi); //get bond dimensions
 
         //write to file
         dataFile << tval << " " << en_phi << " " << maxLinkDim(phi) << " ";
         for(int j = 0; j<Lx-1; j++){ //save svn
             dataFile << svn[j] << " ";
         }
+        for (int j=0; j<L-1; j++){
+            dataFile << dim(bonds[j]) << " ";
+        }
         dataFile << std::endl;
 
         printfln("\nIteration %d, time = %0.2f; phi energy = %0.3f, max link dim is %d",n,tval,en_phi,maxLinkDim(phi));
 
         // check if bondDim is maxed out
-        auto bonds = linkInds(psi); //get bond dimensions
         if( numCenter > 1 && dim(bonds[linkCheck-1]) >= maxB){
             printfln("link %d has bond dimension %d", linkCheck, dim(bonds[linkCheck-1]));
             printfln("Switching to 4th order 1-site TDVP");
