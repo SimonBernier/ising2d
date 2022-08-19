@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Mon Aug 15 16:16:06 2022
+# Make data base, printed on Fri Aug 19 14:37:45 2022
 
 # Variables
 
@@ -167,7 +167,7 @@ DEBUGINFOD_URLS =
 # environment
 _ = /mnt/c/Program Files/Microsoft VS Code/bin/code
 # environment
-VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-1ee12be9-fde3-41ea-aa12-efac8dc2bb76.sock
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-d65968ca-c740-42c6-aefa-75d017bac559.sock
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
 # makefile (from '/root/ising2d/itensor/options.mk', line 10)
@@ -205,9 +205,9 @@ ITENSOR_INCLUDEDIR = $(PREFIX)
 
 # Directories
 
-# . (device 2, inode 5066549580897307): 7 files, no impossibilities.
+# . (device 2, inode 5066549580897307): 8 files, no impossibilities.
 
-# 7 files, no impossibilities in 1 directories.
+# 8 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -326,15 +326,14 @@ mkdebugdir:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 26 / storage = 406 B / avg = 15 B
-# current buf: size = 8162 B / used = 406 B / count = 26 / avg = 15 B
+# strcache buffers: 1 (0) / strings = 27 / storage = 438 B / avg = 16 B
+# current buf: size = 8162 B / used = 438 B / count = 27 / avg = 16 B
 
-# strcache performance: lookups = 45 / hit rate = 42%
+# strcache performance: lookups = 46 / hit rate = 41%
 # hash-table stats:
+# Load=27/8192=0%, Rehash=0, Collisions=0/46=0%
+# Finished Make data base on Fri Aug 19 14:37:45 2022
+
  
 make: *** No rule to make target 'all'.  Stop.
 
-# Load=26/8192=0%, Rehash=0, Collisions=0/45=0%
-# Finished Make data base on Mon Aug 15 16:16:06 2022
-
- 
