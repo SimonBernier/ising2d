@@ -14,6 +14,7 @@ std::vector<double> calculateLRenergy(int, int, MPS, std::vector<std::vector<ITe
 Real vonNeumannS(MPS, int);
 
 int main(int argc, char *argv[]){
+    std::clock_t tStart = std::clock();
 
     int Ly = 2;
     int Lx = 16;
@@ -122,6 +123,9 @@ int main(int argc, char *argv[]){
     enerfile << std::endl;
 
     enerfile.close();
+
+    print(" END OF PROGRAM. ");
+    printf("Time taken: %.3fs\n", (double)(std::clock() - tStart)/CLOCKS_PER_SEC);
 
     return 0;
     }
