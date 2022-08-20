@@ -1,0 +1,7 @@
+make --dry-run --keep-going --print-directory
+make: Entering directory '/root/ising2d/superluminal'
+ 
+make: *** No rule to make target 'super_2dtfi.o', needed by 'super_2dtfi'.
+
+make: Leaving directory '/root/ising2d/superluminal'
+ 
