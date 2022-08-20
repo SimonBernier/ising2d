@@ -19,11 +19,11 @@ int main(int argc, char *argv[]){
     auto Ly = input.getInt("Ly", 3);
     auto h = input.getReal("h", 4.0);
     auto truncE = input.getReal("truncE", 1E-10);
-    auto maxB = input.getInt("maxB", 128);
+    auto maxDim = input.getInt("maxDim", 128);
     
     // write results to file
     char schar[64];
-    int n = std::sprintf(schar,"Ly_%d_Lx_%d_h_%0.2f_vCrit.dat",Ly,Lx,h);
+    int n = std::sprintf(schar,"Ly_%d_Lx_%d_h_%0.2f_maxDim_%d_vCrit.dat",Ly,Lx,h,maxDim);
     std::string s(schar);
     std::ofstream dataFile;
     dataFile.open(s); // opens the file
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]){
 
     // 2d ising model parameters
     auto sweeps = Sweeps(15);
-    sweeps.maxdim() = 10, 20, 50, maxB;
+    sweeps.maxdim() = 10, 20, 50, maxDim;
     sweeps.cutoff() = truncE;
     sweeps.noise() = 1E-7, 1E-8, 0., 1E-7, 1E-8, 1E-9, 1E-10, 0.;
 
@@ -103,18 +103,18 @@ int main(int argc, char *argv[]){
     int Nt = int(ttotal/dt); //number of time steps
     Real delta1 =  0.414490771794376*dt; // 4th order time stepping
     Real delta2 = -0.657963087177503*dt;
-    int linkCheck = int(log2( double(maxB)) );
+    int linkCheck = int(log2( double(maxDim)) );
     int numCenter = 2; // start with two-site tdvp
 
     // 4th order TDVP parameters
     auto sweeps1 = Sweeps(2); //two forward time steps of delta1
-    sweeps1.maxdim() = maxB;
+    sweeps1.maxdim() = maxDim;
     sweeps1.cutoff() = truncE;
-    sweeps1.niter() = 15;
+    sweeps1.niter() = 12;
     auto sweeps2 = Sweeps(1); //one backward time step of delta2
-    sweeps2.maxdim() = maxB;
+    sweeps2.maxdim() = maxDim;
     sweeps2.cutoff() = truncE;
-    sweeps2.niter() = 15;
+    sweeps2.niter() = 12;
 
     printfln("\nStarting fourth order 2-site TDVP, dt = %0.2f\n", dt);
 
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]){
         printfln("\nIteration %d, time = %0.2f; phi energy = %0.3f, max link dim is %d",n,tval,en_phi,maxLinkDim(phi));
 
         // check if bondDim is maxed out
-        if( numCenter > 1 && dim(bonds[linkCheck-1]) >= maxB){
+        if( numCenter > 1 && dim(bonds[linkCheck-1]) >= maxDim){
             printfln("link %d has bond dimension %d", linkCheck, dim(bonds[linkCheck-1]));
             printfln("Switching to 4th order 1-site TDVP");
             numCenter = 1;
