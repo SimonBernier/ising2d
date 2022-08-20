@@ -174,6 +174,7 @@ std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
 
     }// for i
 
+    
     // interpolate tempEn into localEnergy
     for(int i=1; i<Lx; i++){
         for(int j=1; j<=Ly; j++){ 
@@ -181,14 +182,15 @@ std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
             int index = (i-1)*Ly + j;
 
             if(j == 1){ // interpolate with periodic boundary conditions
-                localEnergy[index-1] = 0.25 * ( tempEn[i-1][j-1] + tempEn[i][j-1] + tempEn[i-1][j+Ly-2] + tempEn[i][j+Ly-2] );
+                localEnergy[index-1] += 0.25 * ( tempEn[i-1][j-1] + tempEn[i][j-1] + tempEn[i-1][j+Ly-2] + tempEn[i][j+Ly-2] );
             }
             else{ // interpolate normally
-                localEnergy[index-1] = 0.25 * ( tempEn[i-1][j-2] + tempEn[i][j-2] + tempEn[i-1][j-1] + tempEn[i][j-1] );
+                localEnergy[index-1] += 0.25 * ( tempEn[i-1][j-2] + tempEn[i][j-2] + tempEn[i-1][j-1] + tempEn[i][j-1] );
             }
 
         } // for j
     } // for i
+    
 
     return localEnergy;
 
