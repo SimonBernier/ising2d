@@ -17,7 +17,7 @@ int main(int argc, char *argv[]){
 
     auto Lx = input.getInt("Lx", 16);
     auto Ly = input.getInt("Ly", 3);
-    auto h = input.getReal("h", 3.0);
+    auto h = input.getReal("h", 4.0);
     auto truncE = input.getReal("truncE", 1E-10);
     auto maxB = input.getInt("maxB", 128);
     
@@ -36,24 +36,24 @@ int main(int argc, char *argv[]){
     //make header for t=0 calculations
     dataFile << "t=0" << " " << "enPsi" << " " << "enPhi" << " " << "SvN(x,t=0)" << " " << "bondDim" << " " << std::endl;
 
-    auto L = Ly * Lx;
-    auto sites = SpinHalf(L,{"ConserveQNs=",false,"ConserveParity",true});
+    auto N = Ly * Lx;
+    auto sites = SpinHalf(N,{"ConserveQNs=",false,"ConserveParity",true});
 
     auto ampo = AutoMPO(sites);
     auto lattice = squareLattice(Lx, Ly, {"YPeriodic = ", true});
 
     // autompo hamiltonian
     for(auto j : lattice){
-        ampo += -4, "Sx", j.s1, "Sx", j.s2;
+        ampo += -4.0, "Sx", j.s1, "Sx", j.s2;
     }
-    for(auto j : range1(L)){
+    for(auto j : range1(N)){
         ampo += -2.0*h, "Sz", j;
     }
     auto H = toMPO(ampo);
 
     //initial state
     auto initState = InitState(sites); 
-    for(auto j : range1(L)){
+    for(auto j : range1(N)){
         initState.set(j, "Up");
     }
 
@@ -83,14 +83,13 @@ int main(int argc, char *argv[]){
     }
     auto bonds = linkInds(phi); //get bond dimensions
 
-
     printfln("\nIteration %d, time = %0.2f; phi energy = %0.f, max link dim is %d",0,0, en_phi,maxLinkDim(phi));
     // store to file
     dataFile << 0.0 << " " << en_psi << " " << en_phi << " ";
     for(int j = 0; j<Lx-1; j++){ //save svn
         dataFile << svn[j] << " ";
     }
-    for (int j=0; j<L-1; j++){
+    for (int j=0; j<N-1; j++){
         dataFile << dim(bonds[j]) << " ";
     }
     dataFile << std::endl;
@@ -141,7 +140,7 @@ int main(int argc, char *argv[]){
         for(int j = 0; j<Lx-1; j++){ //save svn
             dataFile << svn[j] << " ";
         }
-        for (int j=0; j<L-1; j++){
+        for (int j=0; j<N-1; j++){
             dataFile << dim(bonds[j]) << " ";
         }
         dataFile << std::endl;
