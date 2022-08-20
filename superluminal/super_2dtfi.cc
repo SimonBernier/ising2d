@@ -148,11 +148,11 @@ int main(int argc, char *argv[]){
     auto sweeps1 = Sweeps(2); //two forward time steps of delta1
     sweeps1.maxdim() = maxDim;
     sweeps1.cutoff() = truncE;
-    sweeps1.niter() = 10;
+    sweeps1.niter() = 12;
     auto sweeps2 = Sweeps(1); //one backward time step of delta2
     sweeps2.maxdim() = maxDim;
     sweeps2.cutoff() = truncE;
-    sweeps2.niter() = 10;
+    sweeps2.niter() = 12;
 
     printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, energy, svN, maxLinkDim(psi));
 

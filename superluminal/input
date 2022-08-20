@@ -1,7 +1,7 @@
 input
     {
         Lx = 16
-        Ly = 2
+        Ly = 4
         h = 4.0
         hc = 2.0
         maxDim = 16
