@@ -4,7 +4,7 @@
 using namespace itensor;
 
 //magnetic field vector
-std::vector<double> hvector(int, int, double, double, double, double, double, double);
+std::vector<double> hvector(int, int, double, double, double, double, double);
 //local energy calculation using swap gates
 std::vector<double> calculateLocalEnergy(int, int, SiteSet, MPS, 
                                         std::vector<std::vector<ITensor>>,
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]){
 
     // autompo hamiltonian
     for(auto j : lattice){
-        ampo += -4, "Sx", j.s1, "Sx", j.s2;
+        ampo += -4.0, "Sx", j.s1, "Sx", j.s2;
     }
     //final Hamiltonian
     for(auto j : range1(N)){
@@ -114,9 +114,12 @@ int main(int argc, char *argv[]){
     }
 
     // revert to H at t=0 (gapped ground state)
-    auto hvals = hvector(Lx, Ly, 0.0, h, hc, v, tau, tanhshift);
-    for(auto j : range1(N)){
-        ampo += -2.0*hvals[j-1], "Sz", j;
+    auto hvals = hvector(Lx, Ly, 0.0, h, v, tau, tanhshift);
+    for(int i=1; i<=Lx; i++){
+        for(int j=1; j<=Ly; j++){
+            int b = Ly*(i-1) + j;
+            ampo += -2.0*hvals[b-1], "Sz", b;
+        }
     }
     auto H = toMPO(ampo);
 
@@ -163,11 +166,14 @@ int main(int argc, char *argv[]){
 
         tval += dt; //update time vector
 
-        auto htemp = hvector(Lx, Ly, tval, h, hc, v, tau, tanhshift);
-        for(auto j : range1(N)){
-            auto hDiff = htemp[j-1] - hvals[j-1]; // local difference in h
-            ampo += -2.0*hDiff, "Sz", j; // update MPO
-            hvals[j-1] = htemp[j-1]; // change to new field for next step
+        auto htemp = hvector(Lx, Ly, tval, h, v, tau, tanhshift);
+        for(int i=1; i<=Lx; i++){
+            for(int j=1; j<=Ly; j++){
+                int b = Ly*(i-1) + j;
+                auto hDiff = htemp[b-1] - hvals[b-1]; // local difference in h
+                ampo += -2.0*hDiff, "Sz", b; // update MPO
+                hvals[b-1] = htemp[b-1]; // change to new field for next step
+            }
         }
         H = toMPO(ampo);
 
@@ -202,7 +208,7 @@ int main(int argc, char *argv[]){
     }
 
 // transverse field vector
-std::vector<double> hvector(int Lx, int Ly, double tval, double h, double hc, double v, double tau, double tanhshift){
+std::vector<double> hvector(int Lx, int Ly, double tval, double h, double v, double tau, double tanhshift){
 
     std::vector<double> hvals(Lx*Ly);
 
@@ -213,7 +219,7 @@ std::vector<double> hvector(int Lx, int Ly, double tval, double h, double hc, do
         for (int j = 1; j <= Ly; j++){
 
             int index = Ly*(i-1) + j;
-            hvals[index-1] = hc + h*(0.5 + 0.5*tanh( f/tau + tanhshift ));
+            hvals[index-1] = h*(0.5 + 0.5*tanh( f/tau + tanhshift ));
 
         } // for 
         
