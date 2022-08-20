@@ -10,6 +10,6 @@ let "runNumber = $(( runNumber + 1 ))"
 echo " "
 echo "$str $runNumber"
 
-./gap_2dtfi 16 2 $i
+./gap_2dtfi 16 5 $i
 
 done
