@@ -2,13 +2,13 @@
 
 using namespace itensor;
 
-//function definition for calculation of local energy
+//local energy calculation using swap gates
 std::vector<double> calculateLocalEnergy(int, int, SiteSet, MPS, std::vector<std::vector<ITensor>>,
                                 std::vector<ITensor>, std::vector<std::vector<ITensor>>);
-
-double calculatePBCenergy(int i, int Ly, MPS psi, ITensor LED, SiteSet sites);
-
-std::vector<double> calculateLRenergy(int i, int Ly, MPS psi, std::vector<std::vector<ITensor>> LED_LR, SiteSet sites);
+// calculate energy for periodic boundary at x = i
+double calculatePBCenergy(int, int, MPS, ITensor, SiteSet);
+// calculate energy of horizontal bonds for one column
+std::vector<double> calculateLRenergy(int, int, MPS, std::vector<std::vector<ITensor>>, SiteSet);
 
 //calculate Von Neumann entanglement entropy
 Real vonNeumannS(MPS, int);

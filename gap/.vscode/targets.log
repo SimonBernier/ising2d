@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sat Aug 13 16:39:50 2022
+# Make data base, printed on Fri Aug 19 13:46:49 2022
 
 # Variables
 
@@ -61,7 +61,7 @@ MAKEFLAGS = pqrR
 # makefile
 CURDIR := /root/ising2d/gap
 # environment
-APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = 1
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
 # environment
 LESSOPEN = | /usr/bin/lesspipe %s
 # automatic
@@ -113,7 +113,7 @@ MAKELEVEL := 0
 # default
 MAKE = $(MAKE_COMMAND)
 # environment
-PATH = /root/.vscode-server/bin/3b889b090b5ad5793f524b5d1d39fda662b96a2a/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/mnt/c/Program Files/WindowsApps/CanonicalGroupLimited.UbuntuonWindows_2004.2022.1.0_x64__79rhkp1fndgsc:/mnt/c/Program Files/Python37/Scripts/:/mnt/c/Program Files/Python37/:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/MiKTeX 2.9/miktex/bin/x64/:/mnt/c/Program Files/MATLAB/R2021b/bin:/mnt/c/Program Files (x86)/PharosSystems/Core:/mnt/c/Program Files/Intel/WiFi/bin/:/mnt/c/Program Files/Common Files/Intel/WirelessCommon/:/mnt/c/Program Files (x86)/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/Program Files/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Microsoft VS Code/bin:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/Wolfram Research/WolframScript/:/mnt/c/Users/Utilisateur/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/Utilisateur/AppData/Local/Programs/Julia/Julia-1.4.2/bin:/mnt/c/Exercism:/mnt/c/Program Files (x86)/GitHub CLI/:/mnt/c/Users/Utilisateur/AppData/Local/GitHubDesktop/bin:/snap/bin
+PATH = /root/.vscode-server/bin/6d9b74a70ca9c7733b29f0456fd8195364076dda/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/mnt/c/Program Files/WindowsApps/CanonicalGroupLimited.UbuntuonWindows_2004.2022.1.0_x64__79rhkp1fndgsc:/mnt/c/Program Files/Python37/Scripts/:/mnt/c/Program Files/Python37/:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/MiKTeX 2.9/miktex/bin/x64/:/mnt/c/Program Files/MATLAB/R2021b/bin:/mnt/c/Program Files (x86)/PharosSystems/Core:/mnt/c/Program Files/Intel/WiFi/bin/:/mnt/c/Program Files/Common Files/Intel/WirelessCommon/:/mnt/c/Program Files (x86)/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/Program Files/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Microsoft VS Code/bin:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/Wolfram Research/WolframScript/:/mnt/c/Users/Utilisateur/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/Utilisateur/AppData/Local/Programs/Julia/Julia-1.4.2/bin:/mnt/c/Exercism:/mnt/c/Program Files (x86)/GitHub CLI/:/mnt/c/Users/Utilisateur/AppData/Local/GitHubDesktop/bin:/snap/bin
 # default
 MAKEFILES := 
 # automatic
@@ -167,7 +167,7 @@ DEBUGINFOD_URLS =
 # environment
 _ = /mnt/c/Program Files/Microsoft VS Code/bin/code
 # environment
-VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-4e6dc9e3-955f-4660-9a10-840cfc16135c.sock
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-7ca3061b-e676-454c-9c1c-a62f550e4f3c.sock
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
 # makefile (from '/root/ising2d/itensor/options.mk', line 10)
@@ -205,9 +205,9 @@ ITENSOR_INCLUDEDIR = $(PREFIX)
 
 # Directories
 
-# . (device 2, inode 9288674231765146): 40 files, no impossibilities.
+# . (device 2, inode 9288674231765146): 10 files, no impossibilities.
 
-# 40 files, no impossibilities in 1 directories.
+# 10 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -326,13 +326,13 @@ mkdebugdir:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 59 / storage = 1417 B / avg = 24 B
-# current buf: size = 8162 B / used = 1417 B / count = 59 / avg = 24 B
+# strcache buffers: 1 (0) / strings = 29 / storage = 416 B / avg = 14 B
+# current buf: size = 8162 B / used = 416 B / count = 29 / avg = 14 B
 
-# strcache performance: lookups = 78 / hit rate = 24%
+# strcache performance: lookups = 48 / hit rate = 39%
 # hash-table stats:
-# Load=59/8192=1%, Rehash=0, Collisions=0/78=0%
-# Finished Make data base on Sat Aug 13 16:39:50 2022
+# Load=29/8192=0%, Rehash=0, Collisions=0/48=0%
+# Finished Make data base on Fri Aug 19 13:46:49 2022
 
  
 make: *** No rule to make target 'all'.  Stop.

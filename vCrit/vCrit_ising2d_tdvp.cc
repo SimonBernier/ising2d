@@ -21,8 +21,6 @@ int main(int argc, char *argv[]){
     auto truncE = input.getReal("truncE", 1E-10);
     auto maxB = input.getInt("maxB", 128);
     
-    printfln("Ly = %d, Lx = %d, h = %0.2f", Ly, Lx, h);
-
     // write results to file
     char schar[64];
     int n = std::sprintf(schar,"Ly_%d_Lx_%d_h_%0.2f_vCrit.dat",Ly,Lx,h);
@@ -52,10 +50,12 @@ int main(int argc, char *argv[]){
     auto H = toMPO(ampo);
 
     //initial state
-    auto initState = InitState(sites); 
+    auto state = InitState(sites); 
     for(auto j : range1(N)){
-        initState.set(j, "Up");
+        state.set(j, "Up");
     }
+    auto initState = MPS(state);
+    
 
     // 2d ising model parameters
     auto sweeps = Sweeps(15);
