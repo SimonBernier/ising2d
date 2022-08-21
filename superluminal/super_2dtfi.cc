@@ -142,7 +142,7 @@ int main(int argc, char *argv[]){
     double tval = 0.0; //time
     double delta1 =  0.414490771794376*dt;
     double delta2 = -0.657963087177503*dt;
-    double finalTime = 0.5*double(Lx) + 0.5*double(Lx)/v + 2.0*tau*tanhshift; // 0.5*N/v + 2*tau*shift
+    double finalTime = 0.25*double(Lx) + 0.5*double(Lx)/v + 2.0*tau*tanhshift; // 0.5*N/2 + 0.5*N/v + 2*tau*shift
     int nt = int(finalTime/dt);
     int linkCheck = int(log2( double(maxDim)) );
     int numCenter = 2; // start with two-site tdvp
