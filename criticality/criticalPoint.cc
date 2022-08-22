@@ -212,18 +212,17 @@ double calculatePBCenergy(int i, int Ly, MPS psi, ITensor hterm, SiteSet sites){
         psi.svdBond(g.i1(), AA, Fromleft); //svd to restore MPS
         psi.position(g.i2()); //orthogonality center moves to the right
 
-        //printf("sg (%d,%d)", b,b+1);
+        printf("sg (%d,%d)", b,b+1);
 
     } // for n
 
-    //println("");
+    println("");
                 
     auto ket = psi(index+Ly-2)*psi(index+Ly-1);
     energy = eltC( dag(prime(ket,"Site")) * hterm * ket).real();
 
-    //printfln("e(%d,%d)", index+Ly-2, index+Ly-1);
+    printfln("e(%d,%d)", index+Ly-2, index+Ly-1);
 
-    /*
     //restore the state to the original MPS
     for(int n=Ly-2; n>0; n--){
         int b = index+n;
@@ -231,9 +230,13 @@ double calculatePBCenergy(int i, int Ly, MPS psi, ITensor hterm, SiteSet sites){
         auto AA = psi(b-1)*psi(b)*g.gate(); //contract over bond b
         AA.replaceTags("Site,1","Site,0");
         psi.svdBond(g.i1(), AA, Fromright); //svd from the right
-        psi.position(g.i1()); //move orthogonality center to the left  
+        psi.position(g.i1()); //move orthogonality center to the left
+
+        printf("sg (%d,%d) ", b-1,b);
+
     } // for n
-    */
+    
+    println("\n");
     
     return energy;
 } // calculatePBCenergy
@@ -244,7 +247,7 @@ std::vector<double> calculateLRenergy(int i, int Ly, MPS psi, std::vector<std::v
 
     int index = (i-1)*Ly + 1;
 
-    //smart ordering of gates 
+    // long range interactions with smart ordering of gates 
     for(int m=0; m<=Ly-2; m++){
 
         psi.position(index+Ly+m);
@@ -258,7 +261,7 @@ std::vector<double> calculateLRenergy(int i, int Ly, MPS psi, std::vector<std::v
             psi.svdBond(g.i1(), AA, Fromright); //svd to restore MPS
             psi.position(g.i1()); //orthogonality center moves to the left
 
-            //printf("sg (%d,%d)", b-1,b);
+            //printf("sg (%d,%d) ", b-1,b);
 
         } // for n
 
@@ -272,24 +275,35 @@ std::vector<double> calculateLRenergy(int i, int Ly, MPS psi, std::vector<std::v
         auto ket = psi(index+2*m)*psi(index+2*m+1);
         energy[m] = eltC( dag(prime(ket,"Site")) * LED_LR[i-1][m] * ket).real();
 
-        //printf("e(%d,%d)", index+2*m, index+2*m+1);
+        //printf("e(%d,%d) ", index+2*m, index+2*m+1);
     } // for m
+    
     //println("");
-    /*
+
     // bring index+1 back to position index+Ly
     for(int m=Ly-2; m>=0; m--){
+
         psi.position(index+1+2*m);
-        for(int n=1+m; n<Ly; n++){
-            int b = index + n + m;
+
+        for(int n=m+1; n<Ly; n++){
+
+            int b = index + n + m ;
             auto g = BondGate(sites,b,b+1);
             auto AA = psi(b)*psi(b+1)*g.gate(); //contract over bond b
             AA.replaceTags("Site,1","Site,0"); //replace site tags for correct svd
             psi.svdBond(g.i1(), AA, Fromleft); //svd to restore MPS
             psi.position(g.i2()); //orthogonality center moves to the right
-        } // for n
-    }// for m
-    */
 
+            //printf("sg (%d,%d) ", b,b+1);
+
+        } // for n
+
+        //println("");
+
+    }// for m
+
+    //println("");
+    
     return energy;
 }
 

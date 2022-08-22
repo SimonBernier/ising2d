@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sat Aug 20 01:40:41 2022
+# Make data base, printed on Sun Aug 21 20:28:26 2022
 
 # Variables
 
@@ -167,7 +167,7 @@ DEBUGINFOD_URLS =
 # environment
 _ = /mnt/c/Program Files/Microsoft VS Code/bin/code
 # environment
-VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-44651f9f-0436-4d1a-8a8c-a263f269563b.sock
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-0415cd64-82f6-44cb-b9c7-171b601bb1c9.sock
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
 # makefile (from '/root/ising2d/itensor/options.mk', line 10)
@@ -332,7 +332,7 @@ mkdebugdir:
 # strcache performance: lookups = 45 / hit rate = 42%
 # hash-table stats:
 # Load=26/8192=0%, Rehash=0, Collisions=0/45=0%
-# Finished Make data base on Sat Aug 20 01:40:41 2022
+# Finished Make data base on Sun Aug 21 20:28:26 2022
 
  
 make: *** No rule to make target 'all'.  Stop.
