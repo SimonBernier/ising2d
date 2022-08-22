@@ -47,7 +47,7 @@ int main(int argc, char *argv[]){
 
     // autompo hamiltonian
     for(auto j : lattice){
-        ampo += -4, "Sx", j.s1, "Sx", j.s2;
+        ampo += -4.0, "Sx", j.s1, "Sx", j.s2;
     }
     for(auto j : range1(N)){
         ampo += -2.0*h, "Sz", j;
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]){
         svn[i-1] = vonNeumannS(phi, b);
     }
 
-    printfln("\nIteration %d, time = %0.2f; phi energy = %0.f, max link dim is %d",0,0, en_phi,maxLinkDim(phi));
+    printfln("\nIteration %d, time = %0.2f; phi energy = %0.3f, max link dim is %d",0,0., en_phi,maxLinkDim(phi));
     // store to file
     dataFile << 0.0 << " " << en_psi << " " << maxLinkDim(psi) << " " << en_phi << " " << maxLinkDim(phi) << " ";
     for(int j = 0; j<Lx-1; j++){ //save svn
@@ -127,30 +127,23 @@ int main(int argc, char *argv[]){
     // time evolution parameters
     double tval = 0.0; //time
     double ttotal = 2.0;
-    Real dt = 0.1; //time step
-    int Nt = int(ttotal/dt); //number of time steps
-    Real delta1 =  0.414490771794376*dt; // 4th order time stepping
-    Real delta2 = -0.657963087177503*dt;
+    double tstep = 0.1;
+    Real dt = 0.01; //time step
+    int Nt = int(ttotal/tstep); //number of time steps
 
-    printfln("\nStarting fourth order TEBD, dt = %0.2f\n", dt);
+    printfln("\nStarting second order TEBD, dt = %0.2f\n", dt);
     Args args = Args("Cutoff=",1E-10,"MaxDim=",512);
 
-    auto gatesdelta1 = makeGates(Lx, Ly, delta1, sites, LED, LEDyPBC, LED_LR);
-    auto gatesdelta2 = makeGates(Lx, Ly, delta2, sites, LED, LEDyPBC, LED_LR);
-    std::vector<BondGate> gates = gatesdelta1;
-    gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
-    gates.insert(std::end(gates), std::begin(gatesdelta2), std::end(gatesdelta2));
-    gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
-    gates.insert(std::end(gates), std::begin(gatesdelta1), std::end(gatesdelta1));
+    std::vector<BondGate> gates = makeGates(Lx, Ly, dt, sites, LED, LEDyPBC, LED_LR);
 
     ////////////////////////////////////////////////////////////////////////////
     ///////// time evolve //////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     for(int n=1; n<=Nt; n++){
-        tval += dt; //update time vector
+        tval += tstep; //update time vector
         
         //4th order TEBD
-        gateTEvol(gates,dt,dt,phi,{args,"Verbose=",false});
+        gateTEvol(gates,tstep,dt,phi,{args,"Verbose=",false});
         phi.orthogonalize(args);
 
         en_phi = innerC(phi, H, phi).real();
@@ -189,21 +182,23 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
 
     std::vector<BondGate> gates; 
     
-    //Create the gates exp(-i*tstep/2*hterm)
+    //Create the gates
 
     // vertical bonds
     for(int i=1; i<=Lx; i++){
         for(int j=1; j<=Ly; j++){ 
             int index = (i-1)*Ly + j; //MPS site index
 
-            // nearest-neighbour
+            // nearest neighbour
             if(j<Ly){
                 auto hterm = LED[i-1][j-1];
                 auto g = BondGate(sites,index,index+1,BondGate::tReal,dt/2.,hterm);
                 gates.push_back(g);
-            } //nearest-neighbour
+            }// if j<Ly
             
-            if(j==1){ //y-periodic boundary equations with swap gates
+            // y-PBC
+            if(j==Ly){
+                int index = (i-1)*Ly + 1; //MPS site index
                 for(int n=0; n<Ly-2; n++){ //swap from index-Ly+1 to index-1
                     int b = index+n;
                     auto swapGate = BondGate(sites,b,b+1);
@@ -220,9 +215,9 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
                     auto swapGate = BondGate(sites,b-1,b);
                     gates.push_back(swapGate);
                 }// for n
-            }// y-periodic
-        }// for j
-    }// for i
+            } // if j==1
+        } // for j
+    } // for i
 
     // long-range interaction
     for(int i=1; i<Lx; i++){
@@ -230,7 +225,7 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
         int index = (i-1)*Ly + 1; //MPS site index
 
         for(int m=0; m<=Ly-2; m++){
-            for(int n=Ly; n>1+m; n--){
+            for(int n=Ly; n>m+1; n--){
                 int b = index + n + m;
                 auto swapGate = BondGate(sites,b-1,b);
                 gates.push_back(swapGate);
@@ -241,12 +236,11 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
             auto hterm = LED_LR[i-1][m];
             auto g = BondGate(sites,index+2*m,index+2*m+1,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
-
         }
 
         // bring index+1 back to position index+Ly
         for(int m=Ly-2; m>=0; m--){
-            for(int n=1+m; n<Ly; n++){
+            for(int n=m+1; n<Ly; n++){
                 int b = index + n + m;
                 auto swapGate = BondGate(sites,b,b+1);
                 gates.push_back(swapGate);
@@ -254,9 +248,9 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
         }
     }// for i
 
-    //Create the gates exp(-i*tstep/2*hterm) in reverse order 
+    // make reverse gates
 
-    // horizontal bonds
+    // reverse long-range
     for(int i=Lx-1; i>=1; i--){
 
         int index = (i-1)*Ly + 1; //MPS site index
@@ -277,7 +271,7 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
 
         // bring index+1 back to position index+Ly
         for(int m=Ly-2; m>=0; m--){
-            for(int n=1+m; n<Ly; n++){
+            for(int n=m+1; n<Ly; n++){
                 int b = index + n + m;
                 auto swapGate = BondGate(sites,b,b+1);
                 gates.push_back(swapGate);
@@ -285,26 +279,28 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
         }
     }// for i
 
-    // vertical bonds
-    for(int i=1; i<=Lx; i++){
-        for(int j=1; j<=Ly; j++){ 
+    // reverse vertical bonds
+    for(int i=Lx; i>=1; i--){
+        for(int j=Ly; j>=1; j--){ 
 
             int index = (i-1)*Ly + j; //MPS site index
 
             // nearest-neighbour
             if(j<Ly){
-                auto hterm = LED[i-1][j-1];
-                auto g = BondGate(sites,index,index+1,BondGate::tReal,dt/2.,hterm);
-                gates.push_back(g);
-            } //nearest-neighbour
+            auto hterm = LED[i-1][j-1];
+            auto g = BondGate(sites,index,index+1,BondGate::tReal,dt/2.,hterm);
+            gates.push_back(g);
+            } // if j<Ly
 
-            //y-periodic boundary equations with swap gates
-            if(j==1){
+            // y-PBC
+            if(j==Ly){
+                int index = (i-1)*Ly + 1; //MPS site index
                 for(int n=0; n<Ly-2; n++){ //swap from index-Ly+1 to index-1
                     int b = index+n;
                     auto swapGate = BondGate(sites,b,b+1);
                     gates.push_back(swapGate);
-                }
+                }// for n
+                    
                 auto hterm = LEDyPBC[i-1];
                 auto g = BondGate(sites,index+Ly-2,index+Ly-1,BondGate::tReal,dt/2.,hterm);
                 gates.push_back(g);
@@ -314,10 +310,10 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
                     int b = index+n;
                     auto swapGate = BondGate(sites,b-1,b);
                     gates.push_back(swapGate);
-                }
-            }// y-periodic
-        }// for j
-    }// for i
+                }// for n
+            } // if j==1
+        } // for j
+    } // for i
 
     return gates;
   
