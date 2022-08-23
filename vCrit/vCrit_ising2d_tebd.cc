@@ -83,13 +83,17 @@ int main(int argc, char *argv[]){
             //y-periodic boundary equations
             if(j==Ly){
                 // site index-Ly+1 is moved to site index-1 with swap gates
-                LEDyPBC[i-1] =  -4.0  *sites.op("Sx",index-1)*sites.op("Sx",index);
-                LEDyPBC[i-1] += -2.0*h*sites.op("Id",index-1)*sites.op("Sz",index);
+                LEDyPBC[i-1] =  -4.0*sites.op("Sx",index-1)*sites.op("Sx",index);
             }
             // MPS nearest-neighbour
-            if(j<Ly){
+            if(j<Ly-1){
+                LED[i-1][j-1] =  -4.0*sites.op("Sx",index)*sites.op("Sx",index+1);
+                LED[i-1][j-1] += -2.0*h*sites.op("Sz",index)*sites.op("Id",index+1);
+            }
+            else if(j==Ly-1){
                 LED[i-1][j-1] =  -4.0  *sites.op("Sx",index)*sites.op("Sx",index+1);
                 LED[i-1][j-1] += -2.0*h*sites.op("Sz",index)*sites.op("Id",index+1);
+                LED[i-1][j-1] += -2.0*h*sites.op("Id",index)*sites.op("Sz",index+1);
             }
         }
     }
@@ -114,7 +118,7 @@ int main(int argc, char *argv[]){
         svn[i-1] = vonNeumannS(phi, b);
     }
 
-    printfln("\nIteration %d, time = %0.2f; phi energy = %0.3f, max link dim is %d",0,0., en_phi,maxLinkDim(phi));
+    printfln("\nIteration %d, time = %0.2f; phi energy = %0.6f, max link dim is %d",0,0., en_phi,maxLinkDim(phi));
     // store to file
     dataFile << 0.0 << " " << en_psi << " " << maxLinkDim(psi) << " " << en_phi << " " << maxLinkDim(phi) << " ";
     for(int j = 0; j<Lx-1; j++){ //save svn
@@ -129,12 +133,24 @@ int main(int argc, char *argv[]){
     double ttotal = 2.0;
     double tstep = 0.1;
     Real dt = 0.01; //time step
+    Real delta1 =  0.414490771794376*dt; // 4th order time stepping
+    Real delta2 = -0.657963087177503*dt;
     int Nt = int(ttotal/tstep); //number of time steps
 
     printfln("\nStarting second order TEBD, dt = %0.2f\n", dt);
-    Args args = Args("Cutoff=",1E-10,"MaxDim=",512);
+    Args args = Args("Cutoff=",1E-13,"MaxDim=",10000);
 
     std::vector<BondGate> gates = makeGates(Lx, Ly, dt, sites, LED, LEDyPBC, LED_LR);
+
+    /*
+    std::vector<BondGate> gates1 = makeGates(Lx, Ly, delta1, sites, LED, LEDyPBC, LED_LR);
+    std::vector<BondGate> gates2 = makeGates(Lx, Ly, delta2, sites, LED, LEDyPBC, LED_LR);
+    std::vector<BondGate> gates = gates1;
+    gates.insert(std::end(gates), std::begin(gates1), std::end(gates1));
+    gates.insert(std::end(gates), std::begin(gates2), std::end(gates2));
+    gates.insert(std::end(gates), std::begin(gates1), std::end(gates1));
+    gates.insert(std::end(gates), std::begin(gates1), std::end(gates1));
+    */
 
     ////////////////////////////////////////////////////////////////////////////
     ///////// time evolve //////////////////////////////////////////////////////
@@ -160,7 +176,7 @@ int main(int argc, char *argv[]){
         }
         dataFile << std::endl;
 
-        printfln("\nIteration %d, time = %0.2f; phi energy = %0.3f, max link dim is %d",n,tval,en_phi,maxLinkDim(phi));
+        printfln("\nIteration %d, time = %0.2f; phi energy = %0.6f, max link dim is %d",n,tval,en_phi,maxLinkDim(phi));
 
     }// for n
 
@@ -180,13 +196,13 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
                                 std::vector<ITensor> LEDyPBC,
                                 std::vector<std::vector<ITensor>> LED_LR){
 
-    std::vector<BondGate> gates; 
+    std::vector<BondGate> gates;
     
     //Create the gates
 
-    // vertical bonds
     for(int i=1; i<=Lx; i++){
-        for(int j=1; j<=Ly; j++){ 
+        for(int j=1; j<Ly; j+=2){ 
+
             int index = (i-1)*Ly + j; //MPS site index
 
             // nearest neighbour
@@ -195,31 +211,47 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
                 auto g = BondGate(sites,index,index+1,BondGate::tReal,dt/2.,hterm);
                 gates.push_back(g);
             }// if j<Ly
-            
-            // y-PBC
-            if(j==Ly){
-                int index = (i-1)*Ly + 1; //MPS site index
-                for(int n=0; n<Ly-2; n++){ //swap from index-Ly+1 to index-1
-                    int b = index+n;
-                    auto swapGate = BondGate(sites,b,b+1);
-                    gates.push_back(swapGate);
-                }// for n
+        }// for j
+    }// for i
 
-                auto hterm = LEDyPBC[i-1];
-                auto g = BondGate(sites,index+Ly-2,index+Ly-1,BondGate::tReal,dt/2.,hterm);
+    for(int i=1; i<=Lx; i++){
+        for(int j=2; j<Ly; j+=2){ 
+
+            int index = (i-1)*Ly + j; //MPS site index
+
+            // nearest neighbour
+            if(j<Ly){
+                auto hterm = LED[i-1][j-1];
+                auto g = BondGate(sites,index,index+1,BondGate::tReal,dt/2.,hterm);
                 gates.push_back(g);
+            }// if j<Ly
+        }// for j
+    }// for i
+            
+    // y-PBC
+    for(int i=1; i<=Lx; i++){
 
-                //restore the state to the original MPS
-                for(int n=Ly-2; n>0; n--){
-                    int b = index+n;
-                    auto swapGate = BondGate(sites,b-1,b);
-                    gates.push_back(swapGate);
-                }// for n
-            } // if j==1
-        } // for j
+        int index = (i-1)*Ly + 1; //MPS site index
+
+        for(int n=0; n<Ly-2; n++){ //swap from index-Ly+1 to index-1
+            int b = index+n;
+            auto swapGate = BondGate(sites,b,b+1);
+            gates.push_back(swapGate);
+        }// for n
+
+        auto hterm = LEDyPBC[i-1];
+        auto g = BondGate(sites,index+Ly-2,index+Ly-1,BondGate::tReal,dt/2.,hterm);
+        gates.push_back(g);
+
+        //restore the state to the original MPS
+        for(int n=Ly-2; n>0; n--){
+            int b = index+n;
+            auto swapGate = BondGate(sites,b-1,b);
+            gates.push_back(swapGate);
+        }// for n
     } // for i
 
-    // long-range interaction
+    // long-range
     for(int i=1; i<Lx; i++){
 
         int index = (i-1)*Ly + 1; //MPS site index
@@ -229,14 +261,14 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
                 int b = index + n + m;
                 auto swapGate = BondGate(sites,b-1,b);
                 gates.push_back(swapGate);
-            }
-        }
+            }// for n
+        }// for m
 
         for(int m = 0; m<Ly; m++){
             auto hterm = LED_LR[i-1][m];
             auto g = BondGate(sites,index+2*m,index+2*m+1,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
-        }
+        }// for m
 
         // bring index+1 back to position index+Ly
         for(int m=Ly-2; m>=0; m--){
@@ -244,12 +276,11 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
                 int b = index + n + m;
                 auto swapGate = BondGate(sites,b,b+1);
                 gates.push_back(swapGate);
-            }
-        }
+            }// for n
+        }// for m
     }// for i
 
     // make reverse gates
-
     // reverse long-range
     for(int i=Lx-1; i>=1; i--){
 
@@ -260,14 +291,14 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
                 int b = index + n + m;
                 auto swapGate = BondGate(sites,b-1,b);
                 gates.push_back(swapGate);
-            }
-        }
-              
+            }// for n
+        }// for m
+                    
         for(int m = Ly-1; m>=0; m--){
             auto hterm = LED_LR[i-1][m];
             auto g = BondGate(sites,index+2*m,index+2*m+1,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
-        }
+        }// for m
 
         // bring index+1 back to position index+Ly
         for(int m=Ly-2; m>=0; m--){
@@ -275,45 +306,56 @@ std::vector<BondGate> makeGates(int Lx, int Ly, double dt, SiteSet sites,
                 int b = index + n + m;
                 auto swapGate = BondGate(sites,b,b+1);
                 gates.push_back(swapGate);
-            }
-        }
+            }// for n
+        }// for m
     }// for i
 
-    // reverse vertical bonds
+    // y-PBC
     for(int i=Lx; i>=1; i--){
-        for(int j=Ly; j>=1; j--){ 
+            
+        int index = (i-1)*Ly + 1; //MPS site index
+
+        for(int n=0; n<Ly-2; n++){ //swap from index-Ly+1 to index-1
+            int b = index+n;
+            auto swapGate = BondGate(sites,b,b+1);
+            gates.push_back(swapGate);
+        }// for n
+                    
+        auto hterm = LEDyPBC[i-1];
+        auto g = BondGate(sites,index+Ly-2,index+Ly-1,BondGate::tReal,dt/2.,hterm);
+        gates.push_back(g);
+
+        //restore the state to the original MPS
+        for(int n=Ly-2; n>0; n--){
+            int b = index+n;
+            auto swapGate = BondGate(sites,b-1,b);
+            gates.push_back(swapGate);
+        }// for n
+    } // for i
+
+    // nearest-neighbour
+    for(int i=Lx; i>=1; i--){
+        for(int j=Ly-1 - (Ly-1)%2; j>=2; j-=2){ 
 
             int index = (i-1)*Ly + j; //MPS site index
 
-            // nearest-neighbour
-            if(j<Ly){
             auto hterm = LED[i-1][j-1];
             auto g = BondGate(sites,index,index+1,BondGate::tReal,dt/2.,hterm);
             gates.push_back(g);
-            } // if j<Ly
+        }// for j
+    }// for i
 
-            // y-PBC
-            if(j==Ly){
-                int index = (i-1)*Ly + 1; //MPS site index
-                for(int n=0; n<Ly-2; n++){ //swap from index-Ly+1 to index-1
-                    int b = index+n;
-                    auto swapGate = BondGate(sites,b,b+1);
-                    gates.push_back(swapGate);
-                }// for n
-                    
-                auto hterm = LEDyPBC[i-1];
-                auto g = BondGate(sites,index+Ly-2,index+Ly-1,BondGate::tReal,dt/2.,hterm);
-                gates.push_back(g);
+    // nearest-neighbour
+    for(int i=Lx; i>=1; i--){
+        for(int j=Ly-1 - Ly%2; j>=1; j-=2){ 
 
-                //restore the state to the original MPS
-                for(int n=Ly-2; n>0; n--){
-                    int b = index+n;
-                    auto swapGate = BondGate(sites,b-1,b);
-                    gates.push_back(swapGate);
-                }// for n
-            } // if j==1
-        } // for j
-    } // for i
+            int index = (i-1)*Ly + j; //MPS site index
+
+            auto hterm = LED[i-1][j-1];
+            auto g = BondGate(sites,index,index+1,BondGate::tReal,dt/2.,hterm);
+            gates.push_back(g);
+        }// for j
+    }// for i
 
     return gates;
   

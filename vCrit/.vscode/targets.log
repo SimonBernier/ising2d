@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sun Aug 21 20:53:06 2022
+# Make data base, printed on Mon Aug 22 20:15:06 2022
 
 # Variables
 
@@ -61,7 +61,7 @@ MAKEFLAGS = pqrR
 # makefile
 CURDIR := /root/ising2d/vCrit
 # environment
-APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = 1
 # environment
 LESSOPEN = | /usr/bin/lesspipe %s
 # automatic
@@ -131,6 +131,9 @@ LESSCLOSE = /usr/bin/lesspipe %s %s
 # automatic
 ?F = $(notdir $?)
 # makefile (from '/root/ising2d/itensor/options.mk', line 188)
+ 
+make: *** No rule to make target 'all'.  Stop.
+
 ITENSOR_GLIBS = $(patsubst %,$(ITENSOR_LIBDIR)/lib%-g.a, $(ITENSOR_LIBNAMES))
 # environment
 NAME = Code
@@ -167,7 +170,7 @@ DEBUGINFOD_URLS =
 # environment
 _ = /mnt/c/Program Files/Microsoft VS Code/bin/code
 # environment
-VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-ab23b112-e9cd-4256-af35-2cd43802d008.sock
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-3c60e047-db84-475d-880b-68659585ddd2.sock
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
 # makefile (from '/root/ising2d/itensor/options.mk', line 10)
@@ -205,9 +208,9 @@ ITENSOR_INCLUDEDIR = $(PREFIX)
 
 # Directories
 
-# . (device 2, inode 2814749768403708): 14 files, no impossibilities.
+# . (device 2, inode 2814749768403708): 15 files, no impossibilities.
 
-# 14 files, no impossibilities in 1 directories.
+# 15 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -326,14 +329,12 @@ mkdebugdir:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 33 / storage = 532 B / avg = 16 B
-# current buf: size = 8162 B / used = 532 B / count = 33 / avg = 16 B
+# strcache buffers: 1 (0) / strings = 34 / storage = 559 B / avg = 16 B
+# current buf: size = 8162 B / used = 559 B / count = 34 / avg = 16 B
 
-# strcache performance: lookups = 52 / hit rate = 36%
+# strcache performance: lookups = 53 / hit rate = 35%
 # hash-table stats:
-# Load=33/8192=0%, Rehash=0, Collisions=0/52=0%
-# Finished Make data base on Sun Aug 21 20:53:06 2022
+# Load=34/8192=0%, Rehash=0, Collisions=0/53=0%
+# Finished Make data base on Mon Aug 22 20:15:06 2022
 
  
-make: *** No rule to make target 'all'.  Stop.
-
