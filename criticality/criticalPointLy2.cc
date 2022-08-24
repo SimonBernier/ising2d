@@ -2,13 +2,9 @@
 
 using namespace itensor;
 
-std::vector<MPO> makeEnergyMPO(int, int, double, SiteSet);
-
 //local energy calculation using swap gates
 std::vector<double> calculateLocalEnergy(int, int, SiteSet, MPS, std::vector<ITensor>,
                                                                  std::vector<std::vector<ITensor>>);
-// calculate energy for periodic boundary at x = i
-double calculatePBCenergy(int, int, MPS, ITensor, SiteSet);
 // calculate energy of horizontal bonds for one column
 std::vector<double> calculateLRenergy(int, int, MPS, std::vector<std::vector<ITensor>>, SiteSet);
 
@@ -76,7 +72,7 @@ int main(int argc, char *argv[]){
     sweeps.noise() = 1E-7,1E-8,0;
 
     // calculate initial local energy density
-    std::vector<double> localEnergy(Ly*(Lx-1),0.0); // local energy density vector
+    std::vector<double> localEnergy((Lx-1)*Ly,0.0); // local energy density vector
   
     //make 2D vector of ITensor for local energy operators
     //long-range interactions have the same structure as nearest-neighbour when we use swap gates
@@ -92,8 +88,19 @@ int main(int argc, char *argv[]){
 
         //MPS long-range
         if(i<Lx){
-            for(int m = 0; m<Ly; m++){
-                LED_LR[i-1][m] = -4.0*sites.op("Sx",b+2*m)*sites.op("Sx",b+2*m+1);
+            LED_LR[i-1][0] = -4.0*sites.op("Sx",b)*sites.op("Sx",b+1);
+            LED_LR[i-1][1] = -4.0*sites.op("Sx",b+Ly)*sites.op("Sx",b+Ly+1);
+            LED_LR[i-1][0] += -h*sites.op("Sz",b)*sites.op("Id",b+1);
+            LED_LR[i-1][0] += -h*sites.op("Id",b)*sites.op("Sz",b+1);
+            LED_LR[i-1][1] += -h*sites.op("Sz",b+Ly)*sites.op("Id",b+Ly+1);
+            LED_LR[i-1][1] += -h*sites.op("Id",b+Ly)*sites.op("Sz",b+Ly+1);
+            if( i==1 ){ // add to left
+                LED_LR[i-1][0] += -h*sites.op("Sz",b)*sites.op("Id",b+1);
+                LED_LR[i-1][1] += -h*sites.op("Sz",b+Ly)*sites.op("Id",b+Ly+1);
+            }
+            else if( i==Lx-1){ // add to right
+                LED_LR[i-1][0] += -h*sites.op("Id",b)*sites.op("Sz",b+1);
+                LED_LR[i-1][1] += -h*sites.op("Id",b+Ly)*sites.op("Sz",b+Ly+1);
             }
         }
     }
@@ -111,7 +118,7 @@ int main(int argc, char *argv[]){
 
     // store to file
     enerfile << energy << " " << var << " " << svN << " " << maxLinkDim(psi) << " ";
-    for(int j = 0; j<Ly*(Lx-1); j++){ //save local energy values
+    for(int j = 0; j<(Lx-1)*Ly; j++){ //save local energy values
     enerfile << localEnergy[j] << " ";
     }
     enerfile << std::endl;
@@ -124,48 +131,6 @@ int main(int argc, char *argv[]){
     return 0;
     }
 
-std::vector<MPO> makeEnergyMPO(int Lx, int Ly, double h, SiteSet sites){
-    
-    std::vector<MPO> LED( (Lx-1)*Ly );
-    for (int i = 1; i < Lx; i++){
-
-        int b = (i-1)*Ly + 1;
-        auto ampo = AutoMPO(sites);
-
-        // long-range
-        ampo += -2.0, "Sx", b, "Sx", b+Ly;
-        ampo += -2.0, "Sx", b+1, "Sx", b+Ly+1;
-
-        // on-site transverse field
-        ampo += -h , "Sz", b;
-        ampo += -h , "Sz", b+1;
-        ampo += -h , "Sz", b+Ly;
-        ampo += -h , "Sz", b+Ly+1;
-            
-        // interpolation
-        ampo += -2.0, "Sx", b, "Sx", b+1;
-        ampo += -2.0, "Sx", b+Ly, "Sx", b+Ly+1;
-
-/*
-        if(i == 1){ // add missing terms at the left side of the lattice
-            ampo += -2.0*h , "Sz", b;
-            ampo += -h , "Sz", b+Ly;
-            ampo += -1.0, "Sx", b, "Sx", b+1;
-        }
-        else if(i == Lx-1){ // add missing terms at the right side of the lattice
-            ampo += -h , "Sz", b;
-            ampo += -2.0*h , "Sz", b+Ly;
-            ampo += -1.0, "Sx", b+Ly, "Sx", b+Ly+1;
-        }
-*/    
-        // make the MPO
-        LED[b-1] = toMPO(ampo);
-        printfln("max link dimension of MPO at bond %d = %d", b, maxLinkDim(LED[b-1]));
-    }// for i
-
-    return LED;
-}
-
 // calculates local energy for 2D MPS using gates
 std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
                                 std::vector<ITensor> LED, 
@@ -173,7 +138,7 @@ std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
   
     std::vector<double> vertBonds(Lx, 0.0);
     std::vector<std::vector<double>> horBonds((Lx-1), std::vector<double>(Ly, 0.0)); 
-    std::vector<double> localEnergy(Lx-1, 0.0); // interpolated energy density
+    std::vector<double> localEnergy( (Lx-1)*Ly, 0.0); // interpolated energy density
 
     // MPS nearest-neighbour interaction
     for(int i=1; i<=Lx; i++){
@@ -201,9 +166,17 @@ std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
     
     // interpolate into localEnergy
     for(int i=1; i<Lx; i++){
-
-        localEnergy[i-1] += 0.25 * ( horBonds[i-1][0] + horBonds[i-1][1] + vertBonds[i-1] + vertBonds[i] );
-
+        for(int j=1; j<=Ly; j++){
+            int b = (i-1)*Ly + j;
+            localEnergy[b-1] = horBonds[i-1][j-1];
+            localEnergy[b-1] += 0.25 * ( vertBonds[i-1] + vertBonds[i] );
+            if( i==1 ){
+                localEnergy[b-1] += 0.25 * vertBonds[i-1];
+            }
+            else if( i==Lx-1 ){
+                localEnergy[b-1] += 0.25 * vertBonds[i];
+            }
+        }
     } // for i
 
     return localEnergy;
@@ -230,11 +203,7 @@ std::vector<double> calculateLRenergy(int i, int Ly, MPS psi, std::vector<std::v
             psi.svdBond(g.i1(), AA, Fromright); //svd to restore MPS
             psi.position(g.i1()); //orthogonality center moves to the left
 
-            printf("sg (%d,%d) ", b-1,b);
-
         } // for n
-
-        println("");
 
     } // for m
                 
@@ -244,11 +213,8 @@ std::vector<double> calculateLRenergy(int i, int Ly, MPS psi, std::vector<std::v
         auto ket = psi(index+2*m)*psi(index+2*m+1);
         energy[m] = eltC( dag(prime(ket,"Site")) * LED_LR[i-1][m] * ket).real();
 
-        printf("e(%d,%d) ", index+2*m, index+2*m+1);
     } // for m
     
-    println("");
-
     // bring index+1 back to position index+Ly
     for(int m=Ly-2; m>=0; m--){
 
@@ -263,15 +229,9 @@ std::vector<double> calculateLRenergy(int i, int Ly, MPS psi, std::vector<std::v
             psi.svdBond(g.i1(), AA, Fromleft); //svd to restore MPS
             psi.position(g.i2()); //orthogonality center moves to the right
 
-            printf("sg (%d,%d) ", b,b+1);
-
         } // for n
 
-        println("");
-
     }// for m
-
-    println("");
     
     return energy;
 }
