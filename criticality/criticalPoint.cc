@@ -2,7 +2,7 @@
 
 using namespace itensor;
 
-std::vector<MPO> makeEnergyMPO(int, int, double, MPS, SiteSet);
+//std::vector<MPO> makeEnergyMPO(int, int, double, MPS, SiteSet);
 
 //local energy calculation using swap gates
 std::vector<double> calculateLocalEnergy(int, int, SiteSet, MPS, std::vector<std::vector<ITensor>>,
@@ -90,7 +90,15 @@ int main(int argc, char *argv[]){
             //MPS long-range
             if(i<Lx && j==1){
                 for(int m = 0; m<Ly; m++){
-                LED_LR[i-1][m] = -4.0*sites.op("Sx",index+2*m)*sites.op("Sx",index+2*m+1);
+                    LED_LR[i-1][m] = -4.0*sites.op("Sx",index+2*m)*sites.op("Sx",index+2*m+1);
+                    LED_LR[i-1][m] += -h *sites.op("Sz",index+2*m)*sites.op("Id",index+2*m+1);
+                    LED_LR[i-1][m] += -h *sites.op("Id",index+2*m)*sites.op("Sz",index+2*m+1);
+                    if( i==1 ){ // add to left
+                        LED_LR[i-1][m] += -h*sites.op("Sz",index+2*m)*sites.op("Id",index+2*m+1);
+                    }
+                    else if( i==Lx-1){ // add to right
+                        LED_LR[i-1][m] += -h*sites.op("Id",index+2*m)*sites.op("Sz",index+2*m+1);
+                    }
                 }
             }
             //y-periodic boundary equations
@@ -105,20 +113,18 @@ int main(int argc, char *argv[]){
         }
     }
 
-
     // Create the Local Energy Density MPOs
-    std::vector<MPO> LEDMPO = makeEnergyMPO(Lx,Ly,h,psi,sites);
+    //std::vector<MPO> LEDMPO = makeEnergyMPO(Lx,Ly,h,psi,sites);
 
     // calculate ground state of critical H
-    auto [energy, psi] = dmrg(H,initState,sweeps,{"Silent=",true});
     auto [energy, psi] = dmrg(H,initState,sweeps,{"Silent=",true});
     auto var = inner(H,psi,H,psi) - energy*energy;
 
     // calculate local energy
-    for( int i = 1; i <= (Lx-1)*Ly; i++){
-        localEnergy[i-1] = inner(psi,LED[i-1],psi);
-    }
-    //localEnergy = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LEDyPBC, LED_LR);
+    //for( int i = 1; i <= (Lx-1)*Ly; i++){
+    //    localEnergy[i-1] = inner(psi,LED[i-1],psi);
+    //}
+    localEnergy = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LEDyPBC, LED_LR);
     // calculate von Neumann entanglement entropy
     auto svN = vonNeumannS(psi, N/2);
 
@@ -139,6 +145,7 @@ int main(int argc, char *argv[]){
     return 0;
     }
 
+/*
 std::vector<MPO> makeEnergyMPO(int Lx, int Ly, double h, MPS psi, SiteSet sites){
     
     std::vector<MPO> LED( (Lx-1)*Ly );
@@ -217,6 +224,7 @@ std::vector<MPO> makeEnergyMPO(int Lx, int Ly, double h, MPS psi, SiteSet sites)
 
     return LED;
 }
+*/
 
 // calculates local energy for 2D MPS using gates
 std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
@@ -275,11 +283,26 @@ std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
             else{ // interpolate normally
                 localEnergy[index-1] += 0.25 * ( tempEn[i-1][j-2] + tempEn[i][j-2] + tempEn[i-1][j-1] + tempEn[i][j-1] );
             }
-
+            // add left/right boundary terms
+            if( i==1 ){
+                if( j== 1){
+                    localEnergy[index-1] += 0.25 * ( tempEn[i-1][j+Ly-2] + tempEn[i-1][j-1]);
+                }
+                else{
+                    localEnergy[index-1] += 0.25 * ( tempEn[i-1][j-2] + tempEn[i-1][j-1]);
+                }
+            }// if i=1
+            else if( i==Lx-1 ){
+                if( j== 1){
+                    localEnergy[index-1] += 0.25 * ( tempEn[i][j+Ly-2] + tempEn[i][j-1]);
+                }
+                else{
+                    localEnergy[index-1] += 0.25 * ( tempEn[i][j-2] + tempEn[i][j-1]);
+                }
+            } // if i=Lx-1
         } // for j
     } // for i
     
-
     return localEnergy;
 
 }//localEnergy

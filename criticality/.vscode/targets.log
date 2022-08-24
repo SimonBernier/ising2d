@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Tue Aug 23 19:31:53 2022
+# Make data base, printed on Tue Aug 23 21:19:50 2022
 
 # Variables
 
@@ -27,7 +27,7 @@ VSCODE_CWD = /mnt/c/Program Files/Microsoft VS Code
 # makefile (from '/root/ising2d/itensor/options.mk', line 190)
 ITENSOR_INCLUDEFLAGS = -I'$(ITENSOR_INCLUDEDIR)' $(BLAS_LAPACK_INCLUDEFLAGS)
 # makefile (from 'Makefile', line 12)
-APP = criticalPointLy2
+APP = criticalPoint
 # default
 MAKE_COMMAND := make
 # environment
@@ -207,9 +207,9 @@ ITENSOR_INCLUDEDIR = $(PREFIX)
 
 # Directories
 
-# . (device 2, inode 5066549580897307): 9 files, no impossibilities.
+# . (device 2, inode 5066549580897307): 10 files, no impossibilities.
 
-# 9 files, no impossibilities in 1 directories.
+# 10 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -224,27 +224,14 @@ ITENSOR_INCLUDEDIR = $(PREFIX)
 # 2 implicit rules, 0 (0.0%) terminal.
 # Files
 
-# Not a target:
-.debug_objs/criticalPointLy2.o:
-#  Implicit rule search has not been done.
-#  Modification time never checked.
-#  File has not been updated.
-
-criticalPointLy2-g: mkdebugdir .debug_objs/criticalPointLy2.o /root/ising2d/itensor/lib/libitensor-g.a
-#  Implicit rule search has not been done.
-#  Modification time never checked.
-#  File has not been updated.
-#  recipe to execute (from 'Makefile', line 54):
-	$(CCCOM) $(CCGFLAGS) $(GOBJECTS) -o $(APP)-g $(LIBGFLAGS)
-
-criticalPointLy2: criticalPointLy2.o /root/ising2d/itensor/lib/libitensor.a
+criticalPoint: criticalPoint.o /root/ising2d/itensor/lib/libitensor.a
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
 #  recipe to execute (from 'Makefile', line 51):
 	$(CCCOM) $(CCFLAGS) $(OBJECTS) -o $(APP) $(LIBFLAGS)
 
-debug: criticalPointLy2-g
+debug: criticalPoint-g
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -252,7 +239,10 @@ debug: criticalPointLy2-g
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-08-23 19:31:39.9999722
+ 
+make: *** No rule to make target 'all'.  Stop.
+
+#  Last modified 2022-08-23 21:19:38.7748209
 #  File has been updated.
 #  Successfully updated.
 
@@ -263,12 +253,6 @@ Makefile:
 #  File has been updated.
 #  Successfully updated.
 
-# Not a target:
-criticalPointLy2.o:
-#  Implicit rule search has not been done.
-#  Modification time never checked.
-#  File has not been updated.
-
 clean:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
@@ -278,6 +262,19 @@ clean:
 
 # Not a target:
 /root/ising2d/itensor/lib/libitensor-g.a:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+criticalPoint-g: mkdebugdir .debug_objs/criticalPoint.o /root/ising2d/itensor/lib/libitensor-g.a
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 54):
+	$(CCCOM) $(CCGFLAGS) $(GOBJECTS) -o $(APP)-g $(LIBGFLAGS)
+
+# Not a target:
+.debug_objs/criticalPoint.o:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -301,7 +298,13 @@ all:
 #  Modification time never checked.
 #  File has not been updated.
 
-build: criticalPointLy2
+build: criticalPoint
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+criticalPoint.o:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -328,14 +331,12 @@ mkdebugdir:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 30 / storage = 503 B / avg = 16 B
-# current buf: size = 8162 B / used = 503 B / count = 30 / avg = 16 B
+# strcache buffers: 1 (0) / strings = 29 / storage = 462 B / avg = 15 B
+# current buf: size = 8162 B / used = 462 B / count = 29 / avg = 15 B
 
-# strcache performance: lookups = 47 / hit rate = 36%
+# strcache performance: lookups = 48 / hit rate = 39%
 # hash-table stats:
-# Load=30/8192=0%, Rehash=0, Collisions=3/47=6%
-# Finished Make data base on Tue Aug 23 19:31:53 2022
+# Load=29/8192=0%, Rehash=0, Collisions=1/48=2%
+# Finished Make data base on Tue Aug 23 21:19:50 2022
 
  
-make: *** No rule to make target 'all'.  Stop.
-
