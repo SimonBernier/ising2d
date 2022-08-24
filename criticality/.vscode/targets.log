@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sun Aug 21 20:28:26 2022
+# Make data base, printed on Tue Aug 23 19:31:53 2022
 
 # Variables
 
@@ -27,7 +27,7 @@ VSCODE_CWD = /mnt/c/Program Files/Microsoft VS Code
 # makefile (from '/root/ising2d/itensor/options.mk', line 190)
 ITENSOR_INCLUDEFLAGS = -I'$(ITENSOR_INCLUDEDIR)' $(BLAS_LAPACK_INCLUDEFLAGS)
 # makefile (from 'Makefile', line 12)
-APP = criticalPoint
+APP = criticalPointLy2
 # default
 MAKE_COMMAND := make
 # environment
@@ -113,7 +113,7 @@ MAKELEVEL := 0
 # default
 MAKE = $(MAKE_COMMAND)
 # environment
-PATH = /root/.vscode-server/bin/6d9b74a70ca9c7733b29f0456fd8195364076dda/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/mnt/c/Program Files/WindowsApps/CanonicalGroupLimited.UbuntuonWindows_2004.2022.1.0_x64__79rhkp1fndgsc:/mnt/c/Program Files/Python37/Scripts/:/mnt/c/Program Files/Python37/:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/MiKTeX 2.9/miktex/bin/x64/:/mnt/c/Program Files/MATLAB/R2021b/bin:/mnt/c/Program Files (x86)/PharosSystems/Core:/mnt/c/Program Files/Intel/WiFi/bin/:/mnt/c/Program Files/Common Files/Intel/WirelessCommon/:/mnt/c/Program Files (x86)/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/Program Files/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Microsoft VS Code/bin:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/Wolfram Research/WolframScript/:/mnt/c/Users/Utilisateur/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/Utilisateur/AppData/Local/Programs/Julia/Julia-1.4.2/bin:/mnt/c/Exercism:/mnt/c/Program Files (x86)/GitHub CLI/:/mnt/c/Users/Utilisateur/AppData/Local/GitHubDesktop/bin:/snap/bin
+PATH = /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/mnt/c/Program Files/WindowsApps/CanonicalGroupLimited.UbuntuonWindows_2004.2022.1.0_x64__79rhkp1fndgsc:/mnt/c/Program Files/Python37/Scripts/:/mnt/c/Program Files/Python37/:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/MiKTeX 2.9/miktex/bin/x64/:/mnt/c/Program Files/MATLAB/R2021b/bin:/mnt/c/Program Files (x86)/PharosSystems/Core:/mnt/c/Program Files/Intel/WiFi/bin/:/mnt/c/Program Files/Common Files/Intel/WirelessCommon/:/mnt/c/Program Files (x86)/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/Program Files/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Microsoft VS Code/bin:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/Wolfram Research/WolframScript/:/mnt/c/Users/Utilisateur/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/Utilisateur/AppData/Local/Programs/Julia/Julia-1.4.2/bin:/mnt/c/Exercism:/mnt/c/Program Files (x86)/GitHub CLI/:/mnt/c/Users/Utilisateur/AppData/Local/GitHubDesktop/bin:/snap/bin
 # default
 MAKEFILES := 
 # automatic
@@ -136,6 +136,8 @@ ITENSOR_GLIBS = $(patsubst %,$(ITENSOR_LIBDIR)/lib%-g.a, $(ITENSOR_LIBNAMES))
 NAME = Code
 # makefile (from 'Makefile', line 6)
 LIBRARY_DIR = $(HOME)/ising2d/itensor
+# environment
+VSCODE_SERVER_TAR = /mnt/c/Users/UTILIS~1/AppData/Local/Temp/vscode-remote-wsl/e4503b30fc78200f846c62cf8091b76ff5547662/vscode-server-stable-linux-x64.tar.gz
 # makefile (from '/root/ising2d/itensor/options.mk', line 215)
 UNAME_S := Linux
 # environment
@@ -167,7 +169,7 @@ DEBUGINFOD_URLS =
 # environment
 _ = /mnt/c/Program Files/Microsoft VS Code/bin/code
 # environment
-VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-0415cd64-82f6-44cb-b9c7-171b601bb1c9.sock
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-759ae3d6-9086-4cab-8dad-9cff45a38bcb.sock
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
 # makefile (from '/root/ising2d/itensor/options.mk', line 10)
@@ -197,7 +199,7 @@ ITENSOR_LIBGFLAGS = $(patsubst %,-l%-g, $(ITENSOR_LIBNAMES)) $(BLAS_LAPACK_LIBFL
 # makefile (from '/root/ising2d/itensor/options.mk', line 180)
 ITENSOR_INCLUDEDIR = $(PREFIX)
 # variable set hash-table stats:
-# Load=93/1024=9%, Rehash=0, Collisions=1/173=1%
+# Load=94/1024=9%, Rehash=0, Collisions=1/174=1%
 
 # Pattern-specific Variable Values
 
@@ -205,9 +207,9 @@ ITENSOR_INCLUDEDIR = $(PREFIX)
 
 # Directories
 
-# . (device 2, inode 5066549580897307): 7 files, no impossibilities.
+# . (device 2, inode 5066549580897307): 9 files, no impossibilities.
 
-# 7 files, no impossibilities in 1 directories.
+# 9 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -222,14 +224,27 @@ ITENSOR_INCLUDEDIR = $(PREFIX)
 # 2 implicit rules, 0 (0.0%) terminal.
 # Files
 
-criticalPoint: criticalPoint.o /root/ising2d/itensor/lib/libitensor.a
+# Not a target:
+.debug_objs/criticalPointLy2.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+criticalPointLy2-g: mkdebugdir .debug_objs/criticalPointLy2.o /root/ising2d/itensor/lib/libitensor-g.a
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 54):
+	$(CCCOM) $(CCGFLAGS) $(GOBJECTS) -o $(APP)-g $(LIBGFLAGS)
+
+criticalPointLy2: criticalPointLy2.o /root/ising2d/itensor/lib/libitensor.a
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
 #  recipe to execute (from 'Makefile', line 51):
 	$(CCCOM) $(CCFLAGS) $(OBJECTS) -o $(APP) $(LIBFLAGS)
 
-debug: criticalPoint-g
+debug: criticalPointLy2-g
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -237,7 +252,7 @@ debug: criticalPoint-g
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-01-06 14:14:25.2315317
+#  Last modified 2022-08-23 19:31:39.9999722
 #  File has been updated.
 #  Successfully updated.
 
@@ -248,6 +263,12 @@ Makefile:
 #  File has been updated.
 #  Successfully updated.
 
+# Not a target:
+criticalPointLy2.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
 clean:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
@@ -257,19 +278,6 @@ clean:
 
 # Not a target:
 /root/ising2d/itensor/lib/libitensor-g.a:
-#  Implicit rule search has not been done.
-#  Modification time never checked.
-#  File has not been updated.
-
-criticalPoint-g: mkdebugdir .debug_objs/criticalPoint.o /root/ising2d/itensor/lib/libitensor-g.a
-#  Implicit rule search has not been done.
-#  Modification time never checked.
-#  File has not been updated.
-#  recipe to execute (from 'Makefile', line 54):
-	$(CCCOM) $(CCGFLAGS) $(GOBJECTS) -o $(APP)-g $(LIBGFLAGS)
-
-# Not a target:
-.debug_objs/criticalPoint.o:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -293,13 +301,7 @@ all:
 #  Modification time never checked.
 #  File has not been updated.
 
-build: criticalPoint
-#  Implicit rule search has not been done.
-#  Modification time never checked.
-#  File has not been updated.
-
-# Not a target:
-criticalPoint.o:
+build: criticalPointLy2
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -326,13 +328,13 @@ mkdebugdir:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 26 / storage = 406 B / avg = 15 B
-# current buf: size = 8162 B / used = 406 B / count = 26 / avg = 15 B
+# strcache buffers: 1 (0) / strings = 30 / storage = 503 B / avg = 16 B
+# current buf: size = 8162 B / used = 503 B / count = 30 / avg = 16 B
 
-# strcache performance: lookups = 45 / hit rate = 42%
+# strcache performance: lookups = 47 / hit rate = 36%
 # hash-table stats:
-# Load=26/8192=0%, Rehash=0, Collisions=0/45=0%
-# Finished Make data base on Sun Aug 21 20:28:26 2022
+# Load=30/8192=0%, Rehash=0, Collisions=3/47=6%
+# Finished Make data base on Tue Aug 23 19:31:53 2022
 
  
 make: *** No rule to make target 'all'.  Stop.

@@ -2,6 +2,8 @@
 
 using namespace itensor;
 
+std::vector<MPO> makeEnergyMPO(int, int, double, MPS, SiteSet);
+
 //local energy calculation using swap gates
 std::vector<double> calculateLocalEnergy(int, int, SiteSet, MPS, std::vector<std::vector<ITensor>>,
                                 std::vector<ITensor>, std::vector<std::vector<ITensor>>);
@@ -12,6 +14,8 @@ std::vector<double> calculateLRenergy(int, int, MPS, std::vector<std::vector<ITe
 
 //calculate Von Neumann entanglement entropy
 Real vonNeumannS(MPS, int);
+//calculate spin-spin correlator
+double spinspin(int,int,MPS,SiteSet);
 
 int main(int argc, char *argv[]){
     std::clock_t tStart = std::clock();
@@ -69,7 +73,7 @@ int main(int argc, char *argv[]){
     auto sweeps = Sweeps(15);
     sweeps.maxdim() = 10, 20, 100, 100, 200, 200, 400, 400, 512;
     sweeps.cutoff() = 1E-10;
-    sweeps.noise() = 1E-7,1E-8,0.0;
+    sweeps.noise() = 1E-7,1E-8,1E-7,1E-8,1E-7,1E-8,1E-7,1E-8,1E-7,1E-8,0;
 
     // calculate initial local energy density
     std::vector<double> localEnergy(Ly*(Lx-1),0.0); // local energy density vector
@@ -93,23 +97,28 @@ int main(int argc, char *argv[]){
             if(j==Ly){
                 // site index-Ly+1 is moved to site index-1 with swap gates
                 LEDyPBC[i-1] = -4.0*sites.op("Sx",index-1)*sites.op("Sx",index);
-                LEDyPBC[i-1] += -h *sites.op("Id",index-1)*sites.op("Sz",index);
-                LEDyPBC[i-1] += -h *sites.op("Sz",index-1)*sites.op("Id",index);
             }
             // MPS nearest-neighbour
             if(j<Ly){
                 LED[i-1][j-1] = -4.0*sites.op("Sx",index)*sites.op("Sx",index+1);
-                LED[i-1][j-1] += -h *sites.op("Sz",index)*sites.op("Id",index+1);
-                LED[i-1][j-1] += -h *sites.op("Id",index)*sites.op("Sz",index+1);
             }
         }
     }
 
+
+    // Create the Local Energy Density MPOs
+    std::vector<MPO> LEDMPO = makeEnergyMPO(Lx,Ly,h,psi,sites);
+
     // calculate ground state of critical H
     auto [energy, psi] = dmrg(H,initState,sweeps,{"Silent=",true});
+    auto [energy, psi] = dmrg(H,initState,sweeps,{"Silent=",true});
     auto var = inner(H,psi,H,psi) - energy*energy;
+
     // calculate local energy
-    localEnergy = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LEDyPBC, LED_LR);
+    for( int i = 1; i <= (Lx-1)*Ly; i++){
+        localEnergy[i-1] = inner(psi,LED[i-1],psi);
+    }
+    //localEnergy = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LEDyPBC, LED_LR);
     // calculate von Neumann entanglement entropy
     auto svN = vonNeumannS(psi, N/2);
 
@@ -129,6 +138,85 @@ int main(int argc, char *argv[]){
 
     return 0;
     }
+
+std::vector<MPO> makeEnergyMPO(int Lx, int Ly, double h, MPS psi, SiteSet sites){
+    
+    std::vector<MPO> LED( (Lx-1)*Ly );
+    for (int i = 1; i < Lx; i++){
+        for (int j = 1; j<=Ly; j++){
+
+            int b = (i-1)*Ly + j;
+            auto ampo = AutoMPO(sites);
+
+            // long-range
+            ampo += -4.0, "Sx", b, "Sx", b+Ly;
+
+            // on-site transverse field
+            if(i == 1){ // add missing terms at the left side of the lattice
+                ampo += -2.0*h , "Sz", b;
+                ampo += -h , "Sz", b+Ly;
+                if(j==1){
+                    ampo += -1.0, "Sx", b, "Sx", b+1;
+                    ampo += -1.0, "Sx", b, "Sx", b+Ly-1;
+                }
+                else if(j == Ly){
+                    ampo += -1.0, "Sx", b-1, "Sx", b;
+                    ampo += -1.0, "Sx", b-Ly+1, "Sx", b;
+                }
+                else{
+                    ampo += -1.0, "Sx", b, "Sx", b+1;
+                    ampo += -1.0, "Sx", b-1, "Sx", b;
+                }
+            }
+            else if(i == Lx-1){ // add missing terms at the right side of the lattice
+                ampo += -h , "Sz", b;
+                ampo += -2.0*h , "Sz", b+Ly;
+                if(j==1){
+                    ampo += -1.0, "Sx", b+Ly, "Sx", b+Ly+1;
+                    ampo += -1.0, "Sx", b+Ly, "Sx", b+2*Ly-1;
+                }
+                else if(j == Ly){
+                    ampo += -1.0, "Sx", b+Ly-1, "Sx", b+Ly;
+                    ampo += -1.0, "Sx", b+1, "Sx", b+Ly;
+                }
+                else{
+                    ampo += -1.0, "Sx", b+Ly, "Sx", b+Ly+1;
+                    ampo += -1.0, "Sx", b+Ly-1, "Sx", b+Ly;
+                }
+            }
+            else{ // center of the chain
+                ampo += -h , "Sz", b;
+                ampo += -h , "Sz", b+Ly;
+            }
+            
+            // interpolation
+            if( j == Ly ){ //top of the lattice
+                ampo += -1.0, "Sx", b-1, "Sx", b;
+                ampo += -1.0, "Sx", b, "Sx", b-Ly+1;
+                ampo += -1.0, "Sx", b+Ly-1, "Sx", b+Ly;
+                ampo += -1.0, "Sx", b+Ly, "Sx", b+1;
+            }
+            else if( j == 1){ //bottom of the lattice
+                ampo += -1.0, "Sx", b+Ly-1, "Sx", b;
+                ampo += -1.0, "Sx", b, "Sx", b+1;
+                ampo += -1.0, "Sx", b+2*Ly-1, "Sx", b+Ly;
+                ampo += -1.0, "Sx", b+Ly, "Sx", b+Ly+1;
+            }
+            else{ // middle of the lattice
+                ampo += -1.0, "Sx", b-1, "Sx", b;
+                ampo += -1.0, "Sx", b, "Sx", b+1;
+                ampo += -1.0, "Sx", b+Ly-1, "Sx", b+Ly;
+                ampo += -1.0, "Sx", b+Ly, "Sx", b+Ly+1;
+            }
+            
+            // make the MPO
+            LED[b-1] = toMPO(ampo);
+            //printfln("max link dimension of MPO at bond %d = %d", b, maxLinkDim(LED[b-1]));
+        }// for j
+    }// for i
+
+    return LED;
+}
 
 // calculates local energy for 2D MPS using gates
 std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
@@ -212,16 +300,16 @@ double calculatePBCenergy(int i, int Ly, MPS psi, ITensor hterm, SiteSet sites){
         psi.svdBond(g.i1(), AA, Fromleft); //svd to restore MPS
         psi.position(g.i2()); //orthogonality center moves to the right
 
-        printf("sg (%d,%d)", b,b+1);
+        //printf("sg (%d,%d)", b,b+1);
 
     } // for n
 
-    println("");
+    //println("");
                 
     auto ket = psi(index+Ly-2)*psi(index+Ly-1);
     energy = eltC( dag(prime(ket,"Site")) * hterm * ket).real();
 
-    printfln("e(%d,%d)", index+Ly-2, index+Ly-1);
+    //printfln("e(%d,%d)", index+Ly-2, index+Ly-1);
 
     //restore the state to the original MPS
     for(int n=Ly-2; n>0; n--){
@@ -232,11 +320,11 @@ double calculatePBCenergy(int i, int Ly, MPS psi, ITensor hterm, SiteSet sites){
         psi.svdBond(g.i1(), AA, Fromright); //svd from the right
         psi.position(g.i1()); //move orthogonality center to the left
 
-        printf("sg (%d,%d) ", b-1,b);
+        //printf("sg (%d,%d) ", b-1,b);
 
     } // for n
     
-    println("\n");
+    //println("\n");
     
     return energy;
 } // calculatePBCenergy
@@ -328,3 +416,41 @@ Real vonNeumannS(MPS psi, int b){
     return SvN;
 
 }//vonNeumannS
+
+//calculate spin-spin correlator
+double spinspin(int center, int b, MPS psi, SiteSet sites){
+    
+    double corrX;
+
+    psi.position(b);
+    if(b>center){ //bring site b next to the center from right
+        for(int n=b-1; n>center; n--){
+            auto g = BondGate(sites,n,n+1);
+            auto AA = psi(n)*psi(n+1)*g.gate(); //contract over bond n
+            AA.replaceTags("Site,1","Site,0");
+            psi.svdBond(g.i1(), AA, Fromright); //svd from the right
+            psi.position(g.i1()); //move orthogonality center to the left 
+        }
+        auto ket = psi(center)*psi(center+1);
+        auto SxSx = 4.0*sites.op("Sx",center)*sites.op("Sx",center+1);
+        corrX = eltC( dag(prime(ket,"Site")) * SxSx * ket).real();
+    }
+    else if(b<center){ //bring site b next to the center from left
+        for(int n=b; n<center-1; n++){
+          auto g = BondGate(sites,n,n+1);
+          auto AA = psi(n)*psi(n+1)*g.gate(); //contract over bond n
+          AA.replaceTags("Site,1","Site,0");
+          psi.svdBond(g.i1(), AA, Fromleft); //svd from the right
+          psi.position(g.i2()); //move orthogonality center to the right 
+        }
+        auto ket = psi(center-1)*psi(center);
+        auto SxSx = 4.0*sites.op("Sx",center-1)*sites.op("Sx",center);
+        corrX = eltC( dag(prime(ket,"Site")) * SxSx * ket).real();
+    }
+    else{
+        corrX = 1.;
+    }
+
+    return corrX;
+
+}//SxSx
