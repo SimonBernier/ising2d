@@ -37,14 +37,14 @@ int main(int argc, char *argv[]){
     char schar[64];
     int n1 = std::sprintf(schar,"Ly_%d_Lx_%d_h_%0.2f_tfi2Dcrit_En.dat",Ly,Lx,h); 
     std::string s1(schar);
-    std::ofstream enerfile;
-    enerfile.open(s1); // opens the file
-    if( !enerfile ) { // file couldn't be opened
+    std::ofstream dataFile;
+    dataFile.open(s1); // opens the file
+    if( !dataFile ) { // file couldn't be opened
           std::cerr << "Error: file could not be opened" << std::endl;
         exit(1);
     }
     //make header
-    enerfile << "energy" << " " << "var" << " " << "SvN" << " " << "MaxDim" << " " << "localEnergy" << " " << std::endl;
+    dataFile << "energy" << " " << "var" << " " << "SvN" << " " << "MaxDim" << " " << "localEnergy" << " " << std::endl;
 
     auto N = Ly*Lx;
     auto sites = SpinHalf(N,{"ConserveQNs=",false,"ConserveParity=",true});
@@ -77,7 +77,8 @@ int main(int argc, char *argv[]){
 
     // calculate initial local energy density
     std::vector<double> localEnergy(Ly*(Lx-1),0.0); // local energy density vector
-  
+    std::vector<double> sxsx(N,0.0);
+
     //make 2D vector of ITensor for local energy operators
     //long-range interactions have the same structure as nearest-neighbour when we use swap gates
     std::vector<std::vector<ITensor>> LED(Lx, std::vector<ITensor>(Ly-1));
@@ -127,17 +128,23 @@ int main(int argc, char *argv[]){
     localEnergy = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LEDyPBC, LED_LR);
     // calculate von Neumann entanglement entropy
     auto svN = vonNeumannS(psi, N/2);
+    for(int b = 1; b<=N; b++){
+        sxsx[b-1] = spinspin(N/2+1, b, psi, sites);
+    }
 
     printfln("\n energy = %0.2f, var = %0.2g, SvN = %0.3f, bondDim = %d", energy, var, svN, maxLinkDim(psi));
 
     // store to file
-    enerfile << energy << " " << var << " " << svN << " " << maxLinkDim(psi) << " ";
-    for(int j = 0; j<Ly*(Lx-1); j++){ //save local energy values
-    enerfile << localEnergy[j] << " ";
+    dataFile << energy << " " << var << " " << svN << " " << maxLinkDim(psi) << " ";
+    for(int j = 0; j<(Lx-1)*Ly; j++){ //save local energy values
+        dataFile << localEnergy[j] << " ";
     }
-    enerfile << std::endl;
+    for(int j = 0; j<N; j++){ //save local energy values
+        dataFile << sxsx[j] << " ";
+    }
+    dataFile << std::endl;
 
-    enerfile.close();
+    dataFile.close();
 
     print(" END OF PROGRAM. ");
     printf("Time taken: %.3fs\n", (double)(std::clock() - tStart)/CLOCKS_PER_SEC);

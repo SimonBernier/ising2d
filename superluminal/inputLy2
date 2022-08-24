@@ -1,0 +1,9 @@
+input  
+    {
+        Ly = 2
+        Lx = 16
+        h = 4
+        hc = 1.67
+        maxDim = 64
+        v = 3.5
+    }

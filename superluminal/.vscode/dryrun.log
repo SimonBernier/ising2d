@@ -1,4 +1,4 @@
-make --dry-run --always-make --keep-going --print-directory
+make --dry-run --keep-going --print-directory
 make: Entering directory '/root/ising2d/superluminal'
 g++ -m64 -std=c++17 -fconcepts -fPIC -c -I. -I'/root/ising2d/itensor'  -O2 -DNDEBUG -Wall -Wno-unknown-pragmas -Wno-unused-variable -I/root/ising2d/TDVP -o super_2dtfi.o super_2dtfi.cc
 g++ -m64 -std=c++17 -fconcepts -fPIC -I. -I'/root/ising2d/itensor'  -O2 -DNDEBUG -Wall -Wno-unknown-pragmas -Wno-unused-variable -I/root/ising2d/TDVP super_2dtfi.o -o super_2dtfi -L'/root/ising2d/itensor/lib' -litensor -lpthread -L/usr/lib -lblas -llapack 

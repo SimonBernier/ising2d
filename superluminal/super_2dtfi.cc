@@ -16,6 +16,8 @@ double calculatePBCenergy(int, int, MPS, ITensor, SiteSet);
 std::vector<double> calculateLRenergy(int, int, MPS, std::vector<std::vector<ITensor>>, SiteSet);
 //calculate Von Neumann entanglement entropy
 Real vonNeumannS(MPS, int);
+//calculate spin-spin correlator
+double spinspin(int,int,MPS,SiteSet);
 
 int main(int argc, char *argv[]){
     std::clock_t tStart = std::clock();
@@ -42,15 +44,16 @@ int main(int argc, char *argv[]){
     int n1 = std::sprintf(schar,"Ly_%d_Lx_%d_h_%0.2f_v_%0.2f_tau_%0.1f_maxDim_%d.dat",Ly,Lx,h,v,tau,maxDim);
 
     std::string s1(schar);
-    std::ofstream enerfile;
-    enerfile.open(s1); // opens the file
-    if( !enerfile ) { // file couldn't be opened
+    std::ofstream dataFile;
+    dataFile.open(s1); // opens the file
+    if( !dataFile ) { // file couldn't be opened
         std::cerr << "Error: file could not be opened" << std::endl;
         exit(1);
     }
     //make header
-    enerfile << "tval" << " " << "energy" << " " << "svn" << " " << "MaxDim" << " " << "localEnergy" << " " << std::endl;
-
+    dataFile << "tval" << " " << "energy" << " " << "svn" << " " << "MaxDim" << " " 
+                << "localEnergy" << " " << "sxsx" << " " << std::endl;
+                
     auto N = Ly * Lx;
     auto sites = SpinHalf(N,{"ConserveQNs=",false,"ConserveParity",true});
 
@@ -81,6 +84,7 @@ int main(int argc, char *argv[]){
 
     // calculate initial local energy density
     std::vector<double> localEnergy(Ly*(Lx-1),0.0); // local energy density vector
+    std::vector<double> sxsx(N,0.0);
   
     //make 2D vector of ITensor for local energy operators
     //long-range interactions have the same structure as nearest-neighbour when we use swap gates
@@ -94,21 +98,25 @@ int main(int argc, char *argv[]){
             //MPS long-range
             if(i<Lx && j==1){
                 for(int m = 0; m<Ly; m++){
-                LED_LR[i-1][m] = -4.0*sites.op("Sx",index+2*m)*sites.op("Sx",index+2*m+1);
+                    LED_LR[i-1][m] = -4.0*sites.op("Sx",index+2*m)*sites.op("Sx",index+2*m+1);
+                    LED_LR[i-1][m] += -hc*sites.op("Sz",index+2*m)*sites.op("Id",index+2*m+1);
+                    LED_LR[i-1][m] += -hc*sites.op("Id",index+2*m)*sites.op("Sz",index+2*m+1);
+                    if( i==1 ){ // add to left
+                        LED_LR[i-1][m] += -hc*sites.op("Sz",index+2*m)*sites.op("Id",index+2*m+1);
+                    }
+                    else if( i==Lx-1){ // add to right
+                        LED_LR[i-1][m] += -hc*sites.op("Id",index+2*m)*sites.op("Sz",index+2*m+1);
+                    }
                 }
             }
             //y-periodic boundary equations
             if(j==Ly){
                 // site index-Ly+1 is moved to site index-1 with swap gates
                 LEDyPBC[i-1] = -4.0*sites.op("Sx",index-1)*sites.op("Sx",index);
-                LEDyPBC[i-1] += -hc*sites.op("Id",index-1)*sites.op("Sz",index);
-                LEDyPBC[i-1] += -hc*sites.op("Sz",index-1)*sites.op("Id",index);
             }
             // MPS nearest-neighbour
             if(j<Ly){
                 LED[i-1][j-1] = -4.0*sites.op("Sx",index)*sites.op("Sx",index+1);
-                LED[i-1][j-1] += -hc*sites.op("Sz",index)*sites.op("Id",index+1);
-                LED[i-1][j-1] += -hc*sites.op("Id",index)*sites.op("Sz",index+1);
             }
         }
     }
@@ -130,13 +138,19 @@ int main(int argc, char *argv[]){
     auto svN = vonNeumannS(psi, N/2);
     // calculate local energy density
     localEnergy = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LEDyPBC, LED_LR);
+    for(int b = 1; b<=N; b++){
+        sxsx[b-1] = spinspin(N/2+1, b, psi, sites);
+    }
 
     //store to file
-    enerfile << 0.0 << " " << energy << " " << svN << " " << maxLinkDim(psi) << " "; //print to file
+    dataFile << 0.0 << " " << energy << " " << svN << " " << maxLinkDim(psi) << " "; //print to file
     for(int j = 0; j<Ly*(Lx-1); j++){ //save local energy values
-        enerfile << localEnergy[j] << " ";
+        dataFile << localEnergy[j] << " ";
     }
-    enerfile << std::endl;
+    for(int j = 0; j<N; j++){ //save local energy values
+        dataFile << sxsx[j] << " ";
+    }
+    dataFile << std::endl;
 
     // time evolution parameters
     double tval = 0.0; //time
@@ -187,19 +201,25 @@ int main(int argc, char *argv[]){
         svN = vonNeumannS(psi, N/2);
         // calculate local energy density <psi(t)|H_final(x,y)|psi(t)>
         localEnergy = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LEDyPBC, LED_LR);
+        for(int b = 1; b<=N; b++){
+            sxsx[b-1] = spinspin(N/2+1, b, psi, sites);
+        }
 
         //write to file
-        enerfile << tval << " " << energy << " " << svN << " " << maxLinkDim(psi) << " ";
+        dataFile << tval << " " << energy << " " << svN << " " << maxLinkDim(psi) << " ";
         for(int j = 0; j<Ly*(Lx-1); j++){ //save local energy values
-            enerfile << localEnergy[j] << " ";
+            dataFile << localEnergy[j] << " ";
         }
-        enerfile << std::endl;
+        for(int j = 0; j<N; j++){ //save local energy values
+            dataFile << sxsx[j] << " ";
+        }
+        dataFile << std::endl;
 
         printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, energy, svN, maxLinkDim(psi));
 
     }
 
-    enerfile.close();
+    dataFile.close();
 
     print(" END PROGRAM. TIME TAKEN :");
     printfln("Time taken: %.3fs\n", (double)(std::clock() - tStart)/CLOCKS_PER_SEC);
@@ -284,10 +304,26 @@ std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
             else{ // interpolate normally
                 localEnergy[index-1] += 0.25 * ( tempEn[i-1][j-2] + tempEn[i][j-2] + tempEn[i-1][j-1] + tempEn[i][j-1] );
             }
-
+            // add left/right boundary terms
+            if( i==1 ){
+                if( j== 1){
+                    localEnergy[index-1] += 0.25 * ( tempEn[i-1][j+Ly-2] + tempEn[i-1][j-1]);
+                }
+                else{
+                    localEnergy[index-1] += 0.25 * ( tempEn[i-1][j-2] + tempEn[i-1][j-1]);
+                }
+            }// if i=1
+            else if( i==Lx-1 ){
+                if( j== 1){
+                    localEnergy[index-1] += 0.25 * ( tempEn[i][j+Ly-2] + tempEn[i][j-1]);
+                }
+                else{
+                    localEnergy[index-1] += 0.25 * ( tempEn[i][j-2] + tempEn[i][j-1]);
+                }
+            } // if i=Lx-1
         } // for j
     } // for i
-
+    
     return localEnergy;
 
 }//localEnergy
@@ -322,7 +358,7 @@ std::vector<double> calculateLRenergy(int i, int Ly, MPS psi, std::vector<std::v
 
     int index = (i-1)*Ly + 1;
 
-    //smart ordering of gates 
+    // long range interactions with smart ordering of gates 
     for(int m=0; m<=Ly-2; m++){
 
         psi.position(index+Ly+m);
@@ -337,7 +373,6 @@ std::vector<double> calculateLRenergy(int i, int Ly, MPS psi, std::vector<std::v
             psi.position(g.i1()); //orthogonality center moves to the left
 
         } // for n
-
     } // for m
                 
     for(int m = 0; m<Ly; m++){
@@ -347,7 +382,7 @@ std::vector<double> calculateLRenergy(int i, int Ly, MPS psi, std::vector<std::v
         energy[m] = eltC( dag(prime(ket,"Site")) * LED_LR[i-1][m] * ket).real();
 
     } // for m
-
+        
     return energy;
 }
 
@@ -372,3 +407,41 @@ Real vonNeumannS(MPS psi, int b){
     return SvN;
 
 }//vonNeumannS
+
+//calculate spin-spin correlator
+double spinspin(int center, int b, MPS psi, SiteSet sites){
+    
+    double corrX;
+
+    psi.position(b);
+    if(b>center){ //bring site b next to the center from right
+        for(int n=b-1; n>center; n--){
+            auto g = BondGate(sites,n,n+1);
+            auto AA = psi(n)*psi(n+1)*g.gate(); //contract over bond n
+            AA.replaceTags("Site,1","Site,0");
+            psi.svdBond(g.i1(), AA, Fromright); //svd from the right
+            psi.position(g.i1()); //move orthogonality center to the left 
+        }
+        auto ket = psi(center)*psi(center+1);
+        auto SxSx = 4.0*sites.op("Sx",center)*sites.op("Sx",center+1);
+        corrX = eltC( dag(prime(ket,"Site")) * SxSx * ket).real();
+    }
+    else if(b<center){ //bring site b next to the center from left
+        for(int n=b; n<center-1; n++){
+          auto g = BondGate(sites,n,n+1);
+          auto AA = psi(n)*psi(n+1)*g.gate(); //contract over bond n
+          AA.replaceTags("Site,1","Site,0");
+          psi.svdBond(g.i1(), AA, Fromleft); //svd from the right
+          psi.position(g.i2()); //move orthogonality center to the right 
+        }
+        auto ket = psi(center-1)*psi(center);
+        auto SxSx = 4.0*sites.op("Sx",center-1)*sites.op("Sx",center);
+        corrX = eltC( dag(prime(ket,"Site")) * SxSx * ket).real();
+    }
+    else{
+        corrX = 1.;
+    }
+
+    return corrX;
+
+}//SxSx
