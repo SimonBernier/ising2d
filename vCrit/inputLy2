@@ -2,6 +2,6 @@ input
     {
         Lx = 16
         Ly = 2
-        h = 6
+        h = 3
         maxDim = 64
     }

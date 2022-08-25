@@ -1,6 +1,6 @@
 make --dry-run --always-make --keep-going --print-directory
 make: Entering directory '/root/ising2d/vCrit'
-g++ -m64 -std=c++17 -fconcepts -fPIC -c -I. -I'/root/ising2d/itensor'  -O2 -DNDEBUG -Wall -Wno-unknown-pragmas -Wno-unused-variable -o vCrit_ising2d_tebd.o vCrit_ising2d_tebd.cc
-g++ -m64 -std=c++17 -fconcepts -fPIC -I. -I'/root/ising2d/itensor'  -O2 -DNDEBUG -Wall -Wno-unknown-pragmas -Wno-unused-variable vCrit_ising2d_tebd.o -o vCrit_ising2d_tebd -L'/root/ising2d/itensor/lib' -litensor -lpthread -L/usr/lib -lblas -llapack 
+g++ -m64 -std=c++17 -fconcepts -fPIC -c -I. -I'/root/ising2d/itensor'  -O2 -DNDEBUG -Wall -Wno-unknown-pragmas -Wno-unused-variable -I/root/ising2d/TDVP -o vCrit_ising2d_tdvp.o vCrit_ising2d_tdvp.cc
+g++ -m64 -std=c++17 -fconcepts -fPIC -I. -I'/root/ising2d/itensor'  -O2 -DNDEBUG -Wall -Wno-unknown-pragmas -Wno-unused-variable -I/root/ising2d/TDVP vCrit_ising2d_tdvp.o -o vCrit_ising2d_tdvp -L'/root/ising2d/itensor/lib' -litensor -lpthread -L/usr/lib -lblas -llapack 
 make: Leaving directory '/root/ising2d/vCrit'
  

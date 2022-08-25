@@ -209,6 +209,13 @@ int main(int argc, char *argv[]){
 
         printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, energy, svN, maxLinkDim(psi));
 
+        // check if bondDim is maxed out
+        auto bonds = linkInds(psi); //get bond dimensions
+        if( numCenter > 1 && dim(bonds[linkCheck-1]) >= maxDim){
+            printfln("link %d has bond dimension %d", linkCheck, dim(bonds[linkCheck-1]));
+            printfln("Switching to 4th order 1-site TDVP");
+            numCenter = 1;
+        }
     }
 
     dataFile.close();

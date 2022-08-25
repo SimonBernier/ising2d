@@ -1,7 +1,7 @@
 input
     {
-        Lx = 4
+        Lx = 40
         Ly = 5
-        h = 6
-        maxDim = 64
+        h = 3
+        maxDim = 512
     }
