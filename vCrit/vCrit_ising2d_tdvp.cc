@@ -93,7 +93,7 @@ int main(int argc, char *argv[]){
 
     // time evolution parameters
     double tval = 0.0; //time
-    double ttotal = 8.0;
+    double ttotal = 0.5*double(Lx);
     Real dt = 0.1; //time step
     int Nt = int(ttotal/dt); //number of time steps
     Real delta1 =  0.414490771794376*dt; // 4th order time stepping

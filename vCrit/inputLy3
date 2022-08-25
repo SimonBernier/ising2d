@@ -3,5 +3,5 @@ input
         Lx = 24
         Ly = 3
         h = 3
-        maxDim = 128
+        maxDim = 64
     }
