@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Wed Aug 24 09:29:39 2022
+# Make data base, printed on Sun Jul 16 16:35:21 2023
 
 # Variables
 
@@ -21,7 +21,10 @@ GOBJECTS = $(patsubst %,.debug_objs/%, $(OBJECTS))
 # makefile (from '/root/ising2d/itensor/options.mk', line 182)
 ITENSOR_LIBNAMES = itensor
 # environment
-WSLENV = ELECTRON_RUN_AS_NODE/w:
+define WSLENV
+ELECTRON_RUN_AS_NODE/w:
+
+endef
 # environment
 VSCODE_CWD = /mnt/c/Program Files/Microsoft VS Code
 # makefile (from '/root/ising2d/itensor/options.mk', line 190)
@@ -61,7 +64,7 @@ MAKEFLAGS = pqrR
 # makefile
 CURDIR := /root/ising2d/gap
 # environment
-APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = 1
 # environment
 LESSOPEN = | /usr/bin/lesspipe %s
 # automatic
@@ -93,7 +96,7 @@ ITENSOR_LIBDIR = $(PREFIX)/lib
 # makefile (from '/root/ising2d/itensor/options.mk', line 62)
 PLATFORM = lapack
 # environment
-VSCODE_NLS_CONFIG = {"locale":"en","availableLanguages":{}}
+VSCODE_NLS_CONFIG = {"locale":"en","osLocale":"en","availableLanguages":{}}
 # makefile (from '/root/ising2d/itensor/this_dir.mk', line 1)
 THIS_DIR = /root/ising2d/itensor
 # default
@@ -113,7 +116,7 @@ MAKELEVEL := 0
 # default
 MAKE = $(MAKE_COMMAND)
 # environment
-PATH = /root/.vscode-server/bin/e4503b30fc78200f846c62cf8091b76ff5547662/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/mnt/c/Program Files/WindowsApps/CanonicalGroupLimited.UbuntuonWindows_2004.2022.1.0_x64__79rhkp1fndgsc:/mnt/c/Program Files/Python37/Scripts/:/mnt/c/Program Files/Python37/:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/MiKTeX 2.9/miktex/bin/x64/:/mnt/c/Program Files/MATLAB/R2021b/bin:/mnt/c/Program Files (x86)/PharosSystems/Core:/mnt/c/Program Files/Intel/WiFi/bin/:/mnt/c/Program Files/Common Files/Intel/WirelessCommon/:/mnt/c/Program Files (x86)/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/Program Files/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Microsoft VS Code/bin:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/Wolfram Research/WolframScript/:/mnt/c/Users/Utilisateur/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/Utilisateur/AppData/Local/Programs/Julia/Julia-1.4.2/bin:/mnt/c/Exercism:/mnt/c/Program Files (x86)/GitHub CLI/:/mnt/c/Users/Utilisateur/AppData/Local/GitHubDesktop/bin:/snap/bin
+PATH = /root/.vscode-server/bin/74f6148eb9ea00507ec113ec51c489d6ffb4b771/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/mnt/c/Program Files/WindowsApps/CanonicalGroupLimited.UbuntuonWindows_2004.2022.1.0_x64__79rhkp1fndgsc:/mnt/c/Program Files/Python37/Scripts/:/mnt/c/Program Files/Python37/:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/MiKTeX 2.9/miktex/bin/x64/:/mnt/c/Program Files/MATLAB/R2023a/bin:/mnt/c/Program Files (x86)/PharosSystems/Core:/mnt/c/Program Files/Intel/WiFi/bin/:/mnt/c/Program Files/Common Files/Intel/WirelessCommon/:/mnt/c/Program Files (x86)/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/Program Files/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Microsoft VS Code/bin:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/Wolfram Research/WolframScript/:/mnt/c/Users/Utilisateur/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/Utilisateur/AppData/Local/Programs/Julia/Julia-1.4.2/bin:/mnt/c/Exercism:/mnt/c/Program Files (x86)/GitHub CLI/:/mnt/c/Users/Utilisateur/AppData/Local/GitHubDesktop/bin:/snap/bin
 # default
 MAKEFILES := 
 # environment
@@ -153,7 +156,7 @@ GNUMAKEFLAGS :=
 # environment
 LOGNAME = root
 # environment
-VSCODE_WSL_EXT_LOCATION = /mnt/c/Users/Utilisateur/.vscode/extensions/ms-vscode-remote.remote-wsl-0.66.3
+VSCODE_WSL_EXT_LOCATION = /mnt/c/Users/Utilisateur/.vscode/extensions/ms-vscode-remote.remote-wsl-0.80.2
 # makefile
 .DEFAULT_GOAL := build
 # makefile (from '/root/ising2d/itensor/options.mk', line 212)
@@ -169,7 +172,7 @@ DEBUGINFOD_URLS =
 # environment
 _ = /mnt/c/Program Files/Microsoft VS Code/bin/code
 # environment
-VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-af667181-7b2d-4856-8577-fa72d620c53a.sock
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-ffb13162-91f1-4a43-953f-8d059b72f6d5.sock
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
 # makefile (from '/root/ising2d/itensor/options.mk', line 10)
@@ -302,7 +305,7 @@ build: gap_2dtfi
 # Not a target:
 /root/ising2d/itensor/this_dir.mk:
 #  Implicit rule search has been done.
-#  Last modified 2021-12-17 13:47:37.8653965
+#  Last modified 2022-11-03 18:08:21.2855111
 #  File has been updated.
 #  Successfully updated.
 
@@ -334,7 +337,7 @@ mkdebugdir:
 # strcache performance: lookups = 50 / hit rate = 38%
 # hash-table stats:
 # Load=31/8192=0%, Rehash=0, Collisions=0/50=0%
-# Finished Make data base on Wed Aug 24 09:29:40 2022
+# Finished Make data base on Sun Jul 16 16:35:21 2023
 
  
 make: *** No rule to make target 'all'.  Stop.

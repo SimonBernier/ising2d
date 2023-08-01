@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Thu Aug 25 11:16:27 2022
+# Make data base, printed on Thu Jul 20 20:12:08 2023
 
 # Variables
 
@@ -16,18 +16,21 @@ DYLIB_EXT = so
 LC_ALL = C
 # makefile (from '/root/ising2d/itensor/options.mk', line 163)
 DEBUGFLAGS = -DDEBUG -g -Wall -Wno-unknown-pragmas -pedantic
-# makefile (from 'Makefile', line 39)
+# makefile (from 'Makefile', line 40)
 GOBJECTS = $(patsubst %,.debug_objs/%, $(OBJECTS))
 # makefile (from '/root/ising2d/itensor/options.mk', line 182)
 ITENSOR_LIBNAMES = itensor
 # environment
-WSLENV = ELECTRON_RUN_AS_NODE/w:
+define WSLENV
+ELECTRON_RUN_AS_NODE/w:
+
+endef
 # environment
 VSCODE_CWD = /mnt/c/Program Files/Microsoft VS Code
 # makefile (from '/root/ising2d/itensor/options.mk', line 190)
 ITENSOR_INCLUDEFLAGS = -I'$(ITENSOR_INCLUDEDIR)' $(BLAS_LAPACK_INCLUDEFLAGS)
 # makefile (from 'Makefile', line 14)
-APP = vCrit_ising2d_tdvp
+APP = vCrit2Dising
 # default
 MAKE_COMMAND := make
 # environment
@@ -39,7 +42,7 @@ VSCODE_HANDLES_UNCAUGHT_ERRORS = true
 # default
 .VARIABLES := 
 # environment
-PWD = /root/ising2d/vCrit
+PWD = /root/ising2d/spinspinSF
 # automatic
 %D = $(patsubst %/,%,$(dir $%))
 # environment
@@ -48,7 +51,7 @@ XDG_DATA_DIRS = /usr/local/share:/usr/share:/var/lib/snapd/desktop
 ^D = $(patsubst %/,%,$(dir $^))
 # automatic
 %F = $(notdir $%)
-# makefile (from 'Makefile', line 35)
+# makefile (from 'Makefile', line 33)
 TENSOR_HEADERS = $(LIBRARY_DIR)/itensor/core.h
 # environment
 LANG = C
@@ -59,9 +62,9 @@ LANG = C
 # makefile
 MAKEFLAGS = pqrR
 # makefile
-CURDIR := /root/ising2d/vCrit
+CURDIR := /root/ising2d/spinspinSF
 # environment
-APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = true
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = 1
 # environment
 LESSOPEN = | /usr/bin/lesspipe %s
 # automatic
@@ -80,7 +83,7 @@ MAKEFILE_LIST := Makefile /root/ising2d/itensor/this_dir.mk /root/ising2d/itenso
 ?D = $(patsubst %/,%,$(dir $?))
 # makefile (from 'Makefile', line 22)
 CCFILES = $(APP).cc
-# makefile (from 'Makefile', line 32)
+# makefile (from 'Makefile', line 35)
 CCFLAGS = -I. $(ITENSOR_INCLUDEFLAGS) $(OPTIMIZATIONS) -Wno-unused-variable -I$(TDVP_DIR)
 # makefile (from '/root/ising2d/itensor/options.mk', line 63)
 BLAS_LAPACK_LIBFLAGS = -lpthread -L/usr/lib -lblas -llapack 
@@ -93,7 +96,7 @@ ITENSOR_LIBDIR = $(PREFIX)/lib
 # makefile (from '/root/ising2d/itensor/options.mk', line 62)
 PLATFORM = lapack
 # environment
-VSCODE_NLS_CONFIG = {"locale":"en","availableLanguages":{}}
+VSCODE_NLS_CONFIG = {"locale":"en","osLocale":"en","availableLanguages":{}}
 # makefile (from '/root/ising2d/itensor/this_dir.mk', line 1)
 THIS_DIR = /root/ising2d/itensor
 # default
@@ -102,6 +105,8 @@ MAKE_HOST := x86_64-pc-linux-gnu
 SHELL = /bin/sh
 # default
 MAKECMDGOALS := all
+# makefile (from 'Makefile', line 18)
+HEADERS = $(TDVP_DIR)/tdvp.h
 # environment
 SHLVL = 1
 # makefile (from '/root/ising2d/itensor/options.mk', line 187)
@@ -113,16 +118,14 @@ MAKELEVEL := 0
 # default
 MAKE = $(MAKE_COMMAND)
 # environment
-PATH = /root/.vscode-server/bin/e4503b30fc78200f846c62cf8091b76ff5547662/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/mnt/c/Program Files/WindowsApps/CanonicalGroupLimited.UbuntuonWindows_2004.2022.1.0_x64__79rhkp1fndgsc:/mnt/c/Program Files/Python37/Scripts/:/mnt/c/Program Files/Python37/:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/MiKTeX 2.9/miktex/bin/x64/:/mnt/c/Program Files/MATLAB/R2021b/bin:/mnt/c/Program Files (x86)/PharosSystems/Core:/mnt/c/Program Files/Intel/WiFi/bin/:/mnt/c/Program Files/Common Files/Intel/WirelessCommon/:/mnt/c/Program Files (x86)/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/Program Files/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Microsoft VS Code/bin:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/Wolfram Research/WolframScript/:/mnt/c/Users/Utilisateur/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/Utilisateur/AppData/Local/Programs/Julia/Julia-1.4.2/bin:/mnt/c/Exercism:/mnt/c/Program Files (x86)/GitHub CLI/:/mnt/c/Users/Utilisateur/AppData/Local/GitHubDesktop/bin:/snap/bin
+PATH = /root/.vscode-server/bin/74f6148eb9ea00507ec113ec51c489d6ffb4b771/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/mnt/c/Program Files/WindowsApps/CanonicalGroupLimited.UbuntuonWindows_2004.2022.1.0_x64__79rhkp1fndgsc:/mnt/c/Program Files/Python37/Scripts/:/mnt/c/Program Files/Python37/:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/MiKTeX 2.9/miktex/bin/x64/:/mnt/c/Program Files/MATLAB/R2023a/bin:/mnt/c/Program Files (x86)/PharosSystems/Core:/mnt/c/Program Files/Intel/WiFi/bin/:/mnt/c/Program Files/Common Files/Intel/WirelessCommon/:/mnt/c/Program Files (x86)/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/Program Files/Intel/Intel(R) Management Engine Components/DAL:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Microsoft VS Code/bin:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/Wolfram Research/WolframScript/:/mnt/c/Users/Utilisateur/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/Utilisateur/AppData/Local/Programs/Julia/Julia-1.4.2/bin:/mnt/c/Exercism:/mnt/c/Program Files (x86)/GitHub CLI/:/mnt/c/Users/Utilisateur/AppData/Local/GitHubDesktop/bin:/snap/bin
 # default
 MAKEFILES := 
-# environment
-MOTD_SHOWN = update-motd
 # automatic
 ^F = $(notdir $^)
 # makefile (from '/root/ising2d/itensor/options.mk', line 211)
 LIBFLAGS = -L'$(ITENSOR_LIBDIR)' $(ITENSOR_LIBFLAGS)
-# makefile (from 'Makefile', line 33)
+# makefile (from 'Makefile', line 36)
 CCGFLAGS = -I. $(ITENSOR_INCLUDEFLAGS) $(DEBUGFLAGS) -I$(TDVP_DIR)
 # makefile (from '/root/ising2d/itensor/options.mk', line 221)
 DYLIB_FLAGS = -shared
@@ -136,7 +139,7 @@ LESSCLOSE = /usr/bin/lesspipe %s %s
 ITENSOR_GLIBS = $(patsubst %,$(ITENSOR_LIBDIR)/lib%-g.a, $(ITENSOR_LIBNAMES))
 # environment
 NAME = Code
-# makefile (from 'Makefile', line 6)
+# makefile (from 'Makefile', line 7)
 LIBRARY_DIR = $(HOME)/ising2d/itensor
 # makefile (from '/root/ising2d/itensor/options.mk', line 215)
 UNAME_S := Linux
@@ -146,21 +149,21 @@ HOSTTYPE = x86_64
 LS_COLORS = rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:
 # automatic
 +F = $(notdir $+)
-# makefile (from 'Makefile', line 38)
+# makefile (from 'Makefile', line 39)
 OBJECTS = $(patsubst %.cc,%.o, $(CCFILES))
 # 'override' directive
 GNUMAKEFLAGS := 
 # environment
 LOGNAME = root
 # environment
-VSCODE_WSL_EXT_LOCATION = /mnt/c/Users/Utilisateur/.vscode/extensions/ms-vscode-remote.remote-wsl-0.66.3
+VSCODE_WSL_EXT_LOCATION = /mnt/c/Users/Utilisateur/.vscode/extensions/ms-vscode-remote.remote-wsl-0.80.2
 # makefile
 .DEFAULT_GOAL := build
 # makefile (from '/root/ising2d/itensor/options.mk', line 212)
 LIBGFLAGS = -L'$(ITENSOR_LIBDIR)' $(ITENSOR_LIBGFLAGS)
 # environment
 USER = root
-# makefile (from 'Makefile', line 7)
+# makefile (from 'Makefile', line 8)
 TDVP_DIR = $(HOME)/ising2d/TDVP
 # default
 MAKE_VERSION := 4.3
@@ -171,7 +174,7 @@ DEBUGINFOD_URLS =
 # environment
 _ = /mnt/c/Program Files/Microsoft VS Code/bin/code
 # environment
-VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-fd72b1ee-62b3-415d-b669-8e13f39e89ca.sock
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-b80df220-6c79-4bff-924a-4aca9b92f44c.sock
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
 # makefile (from '/root/ising2d/itensor/options.mk', line 10)
@@ -201,7 +204,7 @@ ITENSOR_LIBGFLAGS = $(patsubst %,-l%-g, $(ITENSOR_LIBNAMES)) $(BLAS_LAPACK_LIBFL
 # makefile (from '/root/ising2d/itensor/options.mk', line 180)
 ITENSOR_INCLUDEDIR = $(PREFIX)
 # variable set hash-table stats:
-# Load=95/1024=9%, Rehash=0, Collisions=1/179=1%
+# Load=95/1024=9%, Rehash=0, Collisions=1/183=1%
 
 # Pattern-specific Variable Values
 
@@ -209,30 +212,24 @@ ITENSOR_INCLUDEDIR = $(PREFIX)
 
 # Directories
 
-# . (device 2, inode 2814749768403708): 15 files, no impossibilities.
+# . (device 2, inode 5348024557535994): 13 files, no impossibilities.
 
-# 15 files, no impossibilities in 1 directories.
+# 13 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
-%.o: %.cc /root/ising2d/itensor/itensor/core.h
-#  recipe to execute (from 'Makefile', line 44):
+%.o: %.cc /root/ising2d/TDVP/tdvp.h /root/ising2d/itensor/itensor/core.h
+#  recipe to execute (from 'Makefile', line 45):
 	$(CCCOM) -c $(CCFLAGS) -o $@ $<
 
-.debug_objs/%.o: %.cc /root/ising2d/itensor/itensor/core.h
-#  recipe to execute (from 'Makefile', line 47):
+.debug_objs/%.o: %.cc /root/ising2d/TDVP/tdvp.h /root/ising2d/itensor/itensor/core.h
+#  recipe to execute (from 'Makefile', line 48):
 	$(CCCOM) -c $(CCGFLAGS) -o $@ $<
 
 # 2 implicit rules, 0 (0.0%) terminal.
 # Files
 
-# Not a target:
-.debug_objs/vCrit_ising2d_tdvp.o:
-#  Implicit rule search has not been done.
-#  Modification time never checked.
-#  File has not been updated.
-
-debug: vCrit_ising2d_tdvp-g
+debug: vCrit2Dising-g
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
@@ -240,7 +237,10 @@ debug: vCrit_ising2d_tdvp-g
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-08-24 10:32:23.6096071
+ 
+make: *** No rule to make target 'all'.  Stop.
+
+#  Last modified 2023-07-20 20:12:06.3977603
 #  File has been updated.
 #  Successfully updated.
 
@@ -251,11 +251,17 @@ Makefile:
 #  File has been updated.
 #  Successfully updated.
 
+# Not a target:
+.debug_objs/vCrit2Dising.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
 clean:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 61):
+#  recipe to execute (from 'Makefile', line 62):
 	rm -fr .debug_objs *.o $(APP) $(APP)-g
 
 # Not a target:
@@ -264,12 +270,19 @@ clean:
 #  Modification time never checked.
 #  File has not been updated.
 
-vCrit_ising2d_tdvp: vCrit_ising2d_tdvp.o /root/ising2d/itensor/lib/libitensor.a
+vCrit2Dising: vCrit2Dising.o /root/ising2d/itensor/lib/libitensor.a
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 55):
+#  recipe to execute (from 'Makefile', line 56):
 	$(CCCOM) $(CCFLAGS) $(OBJECTS) -o $(APP) $(LIBFLAGS)
+
+vCrit2Dising-g: mkdebugdir .debug_objs/vCrit2Dising.o /root/ising2d/itensor/lib/libitensor-g.a
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 59):
+	$(CCCOM) $(CCGFLAGS) $(GOBJECTS) -o $(APP)-g $(LIBGFLAGS)
 
 # Not a target:
 .DEFAULT:
@@ -285,41 +298,34 @@ all:
 #  File has not been updated.
 
 # Not a target:
-vCrit_ising2d_tdvp.o:
-#  Implicit rule search has not been done.
-#  Modification time never checked.
-#  File has not been updated.
-
-# Not a target:
 /root/ising2d/itensor/lib/libitensor.a:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
 
-build: vCrit_ising2d_tdvp
+build: vCrit2Dising
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-
-vCrit_ising2d_tdvp-g: mkdebugdir .debug_objs/vCrit_ising2d_tdvp.o /root/ising2d/itensor/lib/libitensor-g.a
-#  Implicit rule search has not been done.
-#  Modification time never checked.
-#  File has not been updated.
-#  recipe to execute (from 'Makefile', line 58):
-	$(CCCOM) $(CCGFLAGS) $(GOBJECTS) -o $(APP)-g $(LIBGFLAGS)
 
 # Not a target:
 /root/ising2d/itensor/this_dir.mk:
 #  Implicit rule search has been done.
-#  Last modified 2021-12-17 13:47:37.8653965
+#  Last modified 2022-11-03 18:08:21.2855111
 #  File has been updated.
 #  Successfully updated.
+
+# Not a target:
+vCrit2Dising.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
 
 mkdebugdir:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
 #  File has not been updated.
-#  recipe to execute (from 'Makefile', line 64):
+#  recipe to execute (from 'Makefile', line 65):
 	mkdir -p .debug_objs
 
 # files hash-table stats:
@@ -330,14 +336,12 @@ mkdebugdir:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 34 / storage = 541 B / avg = 15 B
-# current buf: size = 8162 B / used = 541 B / count = 34 / avg = 15 B
+# strcache buffers: 1 (0) / strings = 35 / storage = 499 B / avg = 14 B
+# current buf: size = 8162 B / used = 499 B / count = 35 / avg = 14 B
 
-# strcache performance: lookups = 53 / hit rate = 35%
+# strcache performance: lookups = 53 / hit rate = 33%
 # hash-table stats:
-# Load=34/8192=0%, Rehash=0, Collisions=0/53=0%
-# Finished Make data base on Thu Aug 25 11:16:27 2022
+# Load=35/8192=0%, Rehash=0, Collisions=0/53=0%
+# Finished Make data base on Thu Jul 20 20:12:08 2023
 
  
-make: *** No rule to make target 'all'.  Stop.
-

@@ -2,7 +2,8 @@
 #    (the code containing the 'main' function).
 
 # 2. Edit LIBRARY_DIR to point at the location of your ITensor Library
-#    source folder (this is the folder that has options.mk in it)
+#    source folder (this is the folder that has options.mk in it).
+#    Also, edit TDVP_DIR to point at the location of the TDVP source files.
 LIBRARY_DIR=$(HOME)/ising2d/itensor
 TDVP_DIR=$(HOME)/ising2d/TDVP
 
@@ -10,12 +11,11 @@ TDVP_DIR=$(HOME)/ising2d/TDVP
 #    set APP to 'myappname'. Running 'make' will compile the app.
 #    Running 'make debug' will make a program called 'myappname-g'
 #    which includes debugging symbols and can be used in gdb (Gnu debugger);
-#APP=vCrit_ising2d_tebd
-APP=vCrit_ising2d_tdvp
+APP=vCrit2Dising
 
 # 4. Add any headers your program depends on here. The make program
 #    will auto-detect if these headers have changed and recompile your app.
-#HEADERS=$(TDVP_DIR)/tdvp.h
+HEADERS=$(TDVP_DIR)/tdvp.h
 
 # 5. For any additional .cc (source) files making up your project,
 #    add their full filenames here.
@@ -26,13 +26,14 @@ CCFILES=$(APP).cc
 #################################################################
 #################################################################
 
+
 include $(LIBRARY_DIR)/this_dir.mk
 include $(LIBRARY_DIR)/options.mk
 
+TENSOR_HEADERS=$(LIBRARY_DIR)/itensor/core.h
+
 CCFLAGS+=-I$(TDVP_DIR)
 CCGFLAGS+=-I$(TDVP_DIR)
-
-TENSOR_HEADERS=$(LIBRARY_DIR)/itensor/core.h
 
 #Mappings --------------
 OBJECTS=$(patsubst %.cc,%.o, $(CCFILES))

@@ -1,7 +1,0 @@
-input
-    {
-        Lx = 32
-        Ly = 4
-        h = 3
-        maxDim = 64
-    }

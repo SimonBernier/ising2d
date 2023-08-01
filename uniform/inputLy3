@@ -1,0 +1,9 @@
+input  
+    {
+        Ly = 3
+        Lx = 24
+        h = 5
+        hc = 1.67
+        maxDim = 128
+	tau = 0.5
+    }
