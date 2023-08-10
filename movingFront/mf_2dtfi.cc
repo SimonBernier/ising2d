@@ -8,6 +8,7 @@ std::vector<double> hvector(int, int, double, double, double, double, double);
 //local energy calculation using swap gates
 std::vector<double> calculateLocalEnergy(int, int, SiteSet, MPS,
                                         std::vector<std::vector<ITensor>>,
+                                        std::vector<std::vector<ITensor>>,
                                         std::vector<ITensor>,
                                         std::vector<std::vector<ITensor>>);
 // calculate energy for periodic boundary at x = i
@@ -94,6 +95,7 @@ int main(int argc, char *argv[]){
     //long-range interactions have the same structure as nearest-neighbour when we use swap gates
     std::vector<std::vector<ITensor>> LED(Lx, std::vector<ITensor>(Ly-1));
     std::vector<std::vector<ITensor>> LED_LR(Lx-1, std::vector<ITensor>(Ly));
+    std::vector<std::vector<ITensor>> LED_OnSite(Lx, std::vector<ITensor>(Ly));
     std::vector<ITensor> LEDyPBC(Lx);
     // make local energy tensors
     for(int i=1; i<=Lx; i++){
@@ -102,17 +104,11 @@ int main(int argc, char *argv[]){
             //MPS long-range
             if(i<Lx && j==1){
                 for(int m = 0; m<Ly; m++){
-                    LED_LR[i-1][m] = -4.0*sites.op("Sx",index+2*m)*sites.op("Sx",index+2*m+1);
-                    LED_LR[i-1][m] += -hc*(1.0+hvals[index])*sites.op("Sz",index+2*m)*sites.op("Id",index+2*m+1);
-                    LED_LR[i-1][m] += -hc*(1.0+hvals[index+Ly])*sites.op("Id",index+2*m)*sites.op("Sz",index+2*m+1);
-                    if( i==1 ){ // add to left
-                        LED_LR[i-1][m] += -hc*(1.0+hvals[index])*sites.op("Sz",index+2*m)*sites.op("Id",index+2*m+1);
-                    }
-                    else if( i==Lx-1){ // add to right
-                        LED_LR[i-1][m] += -hc*(1.0+hvals[index+Ly])*sites.op("Id",index+2*m)*sites.op("Sz",index+2*m+1);
-                    }
+                    LED_LR[i-1][m] = -4.0*sites.op("Sx",index+2*m)*sites.op("Sx",index+2*m+1);                    
                 }
             }
+            // on-site operators
+            LED_OnSite[i-1][j-1] = -2.0*hc*(1.0+hvals[index])*sites.op("Sz",index);
             //y-periodic boundary equations
             if(j==Ly){
                 // site index-Ly+1 is moved to site index-1 with swap gates
@@ -127,11 +123,12 @@ int main(int argc, char *argv[]){
 
     //DMRG to find ground state at t=0
     auto [en,psi] = dmrg(H,initState,sweeps,{"Silent=",true});
+    auto [en0,psi0] = dmrg(H,initState,sweeps,{"Silent=",true});
 
     // calculate von Neumann S
     auto svN = vonNeumannS(psi, N/2);
     // calculate local energy density
-    localEn = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LEDyPBC, LED_LR);
+    localEn = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LED_OnSite, LEDyPBC, LED_LR);
     for(int b = 1; b<=N; b++){
         sxsx[b-1] = spinspin(N/2+1, b, psi, sites);
     }
@@ -158,10 +155,9 @@ int main(int argc, char *argv[]){
     double delta2 = -0.657963087177503*dt;
     double finalTime = 0.25*double(Lx) + 0.5*double(Lx)/v + 2.0*tau*tanhshift; // 0.5*N/2 + 0.5*N/v + 2*tau*shift
     int nt = int(finalTime/dt);
-    int numCenter = 2; // start with two-site tdvp
 
     // instantaneous GS search parameters
-    sweeps = Sweeps(15); //number of sweeps is 5
+    sweeps = Sweeps(10); //number of sweeps is 5
     sweeps.maxdim() = maxDim; //gradually increase states kept
     sweeps.cutoff() = truncE; //desired truncation error
     // 4th order TDVP parameters
@@ -183,11 +179,11 @@ int main(int argc, char *argv[]){
 
         tval += dt; //update time vector
 
-	// update magnetic field
+	    // update magnetic field
         hvals = hvector(Lx, Ly, tval, h, v, tau, tanhshift);
 
-	ampo = AutoMPO(sites);
-	for(auto j : lattice){
+        ampo = AutoMPO(sites);
+        for(auto j : lattice){
             ampo += -4.0, "Sx", j.s1, "Sx", j.s2;
     	}
         for(int i=1; i<=Lx; i++){
@@ -196,46 +192,33 @@ int main(int argc, char *argv[]){
                 ampo += -2.0*hc*(1.0 + hvals[b-1]), "Sz", b;
             }
         }
-        auto H = toMPO(ampo);
+        H = toMPO(ampo);
 
-	// calculate instantaneous ground state
+	    // calculate instantaneous ground state
         // use psi as initial condition
-        auto [en0,psi0] = dmrg(H,psi,sweeps,{"Silent=",true});
+        en0 = dmrg(psi0,H,sweeps,{"Silent=",true});
 
-	// time evolve
-        tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"NumCenter",numCenter});
-        tdvp(psi, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"NumCenter",numCenter});
-        tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"NumCenter",numCenter});
+	    // time evolve
+        tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"NumCenter",2});
+        tdvp(psi, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"NumCenter",2});
+        en = tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"NumCenter",2});
 
-	// change long-range fields
-	for(int i=1; i<=Lx; i++){
+        // change transverse fields
+        for(int i=1; i<=Lx; i++){
             for(int j=1; j<=Ly; j++){
                 int index = (i-1)*Ly+j;
-                //MPS long-range
-                if(i<Lx && j==1){
-                    for(int m = 0; m<Ly; m++){
-                        LED_LR[i-1][m] = -4.0*sites.op("Sx",index+2*m)*sites.op("Sx",index+2*m+1);
-                        LED_LR[i-1][m] += -hc*(1.0+hvals[index])*sites.op("Sz",index+2*m)*sites.op("Id",index+2*m+1);
-                        LED_LR[i-1][m] += -hc*(1.0+hvals[index+Ly])*sites.op("Id",index+2*m)*sites.op("Sz",index+2*m+1);
-                        if( i==1 ){ // add to left
-                            LED_LR[i-1][m] += -hc*(1.0+hvals[index])*sites.op("Sz",index+2*m)*sites.op("Id",index+2*m+1);
-                        }
-                        else if( i==Lx-1){ // add to right
-                            LED_LR[i-1][m] += -hc*(1.0+hvals[index+Ly])*sites.op("Id",index+2*m)*sites.op("Sz",index+2*m+1);
-                        }
-                    }
-                }
-	    }
-	}
-        // calculate energy <psi(t)|H|psi(t)>
-        en = innerC(psi,H,psi).real();
+                // on-site operators
+                LED_OnSite[i-1][j-1] = -2.0*hc*(1.0+hvals[index])*sites.op("Sz",index);
+            }
+        }
+
         //calculate entanglement entropy
         svN = vonNeumannS(psi, N/2);
         // calculate local energy density <psi(t)|H(x,y)|psi(t)>
-	localEn0 = calculateLocalEnergy(Lx, Ly, sites, psi0, LED, LEDyPBC, LED_LR);
-	localEn = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LEDyPBC, LED_LR);
+        localEn0 = calculateLocalEnergy(Lx, Ly, sites, psi0, LED, LED_OnSite, LEDyPBC, LED_LR);
+        localEn = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LED_OnSite, LEDyPBC, LED_LR);
         for(int b = 1; b<=N; b++){
-	    sxsx0[b-1] = spinspin(N/2+1, b, psi0, sites);
+	        sxsx0[b-1] = spinspin(N/2+1, b, psi0, sites);
             sxsx[b-1] = spinspin(N/2+1, b, psi, sites);
         }
 
@@ -264,7 +247,7 @@ int main(int argc, char *argv[]){
     printfln("Time taken: %.3fs\n", (double)(std::clock() - tStart)/CLOCKS_PER_SEC);
 
     return 0;
-    }
+}
 
 // transverse field vector
 std::vector<double> hvector(int Lx, int Ly, double tval, double h, double v, double tau, double tanhshift){
@@ -290,6 +273,7 @@ std::vector<double> hvector(int Lx, int Ly, double tval, double h, double v, dou
 // calculates local energy for 2D MPS using gates
 std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
                                 std::vector<std::vector<ITensor>> LED,
+                                std::vector<std::vector<ITensor>> LED_OnSite,
                                 std::vector<ITensor> LEDyPBC,
                                 std::vector<std::vector<ITensor>> LED_LR){
 
@@ -302,7 +286,6 @@ std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
         for(int j=1; j<Ly; j++){ 
 
             int index = (i-1)*Ly + j;
-
             psi.position(index);
             auto ket = psi(index)*psi(index+1);
             tempEn[i-1][j-1] = eltC(dag(prime(ket,"Site")) * LED[i-1][j-1] * ket).real();
@@ -323,12 +306,35 @@ std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
         int index = (i-1)*Ly + 1;
         auto lrEnergy = calculateLRenergy(i, Ly, psi, LED_LR, sites);
 
-        for(int m = 0; m<Ly; m++){
+        for(int m = 0; m<Ly; m++){ // long-range
 
             localEnergy[index-1+m] = lrEnergy[m];
 
-        } // for m
+        }// for m
+    }// for i
 
+    // MPS on-site interactions
+    for(int i=1; i<Lx; i++){
+        for(int j = 1; j <= Ly; j++){
+
+            int index = (i-1)*Ly + j;
+
+            psi.position(index);
+            if(i == 1){
+                localEnergy[index-1] += eltC(dag(prime(psi(index),"Site")) * LED_OnSite[i-1][j-1] * psi(index)).real();
+            }
+            else{
+                localEnergy[index-1] += 0.5*eltC(dag(prime(psi(index),"Site")) * LED_OnSite[i-1][j-1] * psi(index)).real();
+            }
+            
+            psi.position(index+Ly);
+            if(i==Lx-1){
+                localEnergy[index-1] += eltC(dag(prime(psi(index+Ly),"Site")) * LED_OnSite[i][j-1] * psi(index+Ly)).real();
+            }
+            else{
+                localEnergy[index-1] += 0.5*eltC(dag(prime(psi(index+Ly),"Site")) * LED_OnSite[i][j-1] * psi(index+Ly)).real();
+            }
+        }// for j
     }// for i
 
     // interpolate tempEn into localEnergy

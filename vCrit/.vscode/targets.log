@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Thu Jul 20 20:12:08 2023
+# Make data base, printed on Wed Aug  2 07:22:42 2023
 
 # Variables
 
@@ -42,7 +42,7 @@ VSCODE_HANDLES_UNCAUGHT_ERRORS = true
 # default
 .VARIABLES := 
 # environment
-PWD = /root/ising2d/spinspinSF
+PWD = /root/ising2d/vCrit
 # automatic
 %D = $(patsubst %/,%,$(dir $%))
 # environment
@@ -62,7 +62,7 @@ LANG = C
 # makefile
 MAKEFLAGS = pqrR
 # makefile
-CURDIR := /root/ising2d/spinspinSF
+CURDIR := /root/ising2d/vCrit
 # environment
 APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = 1
 # environment
@@ -174,7 +174,7 @@ DEBUGINFOD_URLS =
 # environment
 _ = /mnt/c/Program Files/Microsoft VS Code/bin/code
 # environment
-VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-b80df220-6c79-4bff-924a-4aca9b92f44c.sock
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-2329f117-f764-4cbb-9463-ca2e4d17d8bd.sock
 # environment
 VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
 # makefile (from '/root/ising2d/itensor/options.mk', line 10)
@@ -212,9 +212,9 @@ ITENSOR_INCLUDEDIR = $(PREFIX)
 
 # Directories
 
-# . (device 2, inode 5348024557535994): 13 files, no impossibilities.
+# . (device 2, inode 5348024557535994): 11 files, no impossibilities.
 
-# 13 files, no impossibilities in 1 directories.
+# 11 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -237,9 +237,6 @@ debug: vCrit2Dising-g
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
- 
-make: *** No rule to make target 'all'.  Stop.
-
 #  Last modified 2023-07-20 20:12:06.3977603
 #  File has been updated.
 #  Successfully updated.
@@ -336,12 +333,14 @@ mkdebugdir:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 35 / storage = 499 B / avg = 14 B
-# current buf: size = 8162 B / used = 499 B / count = 35 / avg = 14 B
+# strcache buffers: 1 (0) / strings = 31 / storage = 490 B / avg = 15 B
+# current buf: size = 8162 B / used = 490 B / count = 31 / avg = 15 B
 
-# strcache performance: lookups = 53 / hit rate = 33%
+# strcache performance: lookups = 51 / hit rate = 39%
 # hash-table stats:
-# Load=35/8192=0%, Rehash=0, Collisions=0/53=0%
-# Finished Make data base on Thu Jul 20 20:12:08 2023
+# Load=31/8192=0%, Rehash=0, Collisions=0/51=0%
+# Finished Make data base on Wed Aug  2 07:22:42 2023
 
  
+make: *** No rule to make target 'all'.  Stop.
+

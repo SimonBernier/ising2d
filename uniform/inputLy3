@@ -1,9 +1,9 @@
 input  
     {
         Ly = 3
-        Lx = 24
+        Lx = 12
         h = 5
-        hc = 1.67
+        hc = 2.44
         maxDim = 128
-	tau = 0.5
+	    tau = 0.5
     }

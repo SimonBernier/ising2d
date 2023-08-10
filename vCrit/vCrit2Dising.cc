@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 
     auto Ly = input.getInt("Ly", 3);
 	auto Lx = input.getInt("Lx", 8);
-    auto h = input.getReal("h", 1.); // 1.6700 2.54617 2.7300 2.824674
+    auto h = input.getReal("h", 1.);
     auto truncErr = input.getReal("truncE", 1E-8);
     auto maxDim = input.getInt("maxDim", 512);
 	println();
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 
 	// 2d ising model parameters
 	auto sweeps = Sweeps(15);
-	sweeps.maxdim() = 10, 20, 100, 100, 200, 200, 400, 400, maxDim;
+	sweeps.maxdim() = 50, 100, 200, 200, 400, 400, maxDim;
 	sweeps.cutoff() = truncErr;
 	sweeps.noise() = 1E-7, 1E-8, 0.0;
 
