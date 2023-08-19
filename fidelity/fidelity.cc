@@ -103,7 +103,7 @@ int main(int argc, char *argv[]){
     dataFile << F << " " << std::endl;
     
     for(int i = 1; i <= ISTOP ; i++){
-        double h = h0 + i*2*dh;
+        double h = h0 + i*hstep;
         printfln("\nh = %0.2f", h);
 
         // autompo hamiltonian
