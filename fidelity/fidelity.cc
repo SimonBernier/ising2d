@@ -100,7 +100,7 @@ int main(int argc, char *argv[]){
     auto F = abs(inner(psi1,psi0));
     printfln("Fidelity F = %0.5f", F);
 
-    dataFile << F << " " << std::endl;
+    dataFile << 1.-F << " " << std::endl;
     
     for(int i = 1; i <= ISTOP ; i++){
         double h = h0 + i*hstep;
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]){
         F = abs(inner(psi1,psi0));
         printfln("Fidelity F = %0.5f", F);
 
-        dataFile << F << " " << std::endl;
+        dataFile << 1.-F << " " << std::endl;
     }
 
     dataFile.close();
