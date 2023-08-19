@@ -2,8 +2,6 @@
 
 using namespace itensor;
 
-//std::vector<MPO> makeEnergyMPO(int, int, double, MPS, SiteSet);
-
 //local energy calculation using swap gates
 std::vector<double> calculateLocalEnergy(int, int, SiteSet, MPS, std::vector<std::vector<ITensor>>,
                                 std::vector<ITensor>, std::vector<std::vector<ITensor>>);
