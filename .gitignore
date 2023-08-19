@@ -31,5 +31,9 @@
 *.out
 *.app
 
-#bash
+# Bash
 *.sh
+
+# Data files
+*.txt
+*.dat
