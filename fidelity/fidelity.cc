@@ -24,7 +24,7 @@ int main(int argc, char *argv[]){
 
     //write results to file
     char schar[64];
-    int n1 = std::sprintf(schar,"Ly_%d_Lx_%d_dh_%0.2f_2dTFI_fidelity.dat",Ly,Lx,dh);
+    int n1 = std::sprintf(schar,"Ly_%d_Lx_%d_dh_%0.4f_2dTFI_fidelity.dat",Ly,Lx,dh);
     std::string s1(schar);
     std::ofstream dataFile;
     dataFile.open(s1); // opens the file
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]){
         exit(1);
     }
     dataFile << "h" << " " << "en0" << " " << "var0" << " " << "maxBondDim0" << " "
-             << "en1" << " " << "var1" << " " << "maxBondDim1" << " " << "F" <<  std::endl;
+             << "en1" << " " << "var1" << " " << "maxBondDim1" << " " << "1-F" <<  std::endl;
 
 
     auto N = Lx * Ly;
@@ -98,7 +98,7 @@ int main(int argc, char *argv[]){
     // calculate fidelity
     //
     auto F = abs(inner(psi1,psi0));
-    printfln("Fidelity F = %0.5f", F);
+    printfln("Fidelity F = %0.10f", F);
 
     dataFile << 1.-F << " " << std::endl;
     
@@ -146,7 +146,7 @@ int main(int argc, char *argv[]){
         // calculate fidelity
         //
         F = abs(inner(psi1,psi0));
-        printfln("Fidelity F = %0.5f", F);
+        printfln("Fidelity F = %0.10f", F);
 
         dataFile << 1.-F << " " << std::endl;
     }
