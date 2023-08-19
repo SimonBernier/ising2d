@@ -47,7 +47,7 @@ int main(int argc, char *argv[]){
         ampo += -4.0, "Sx", j.s1, "Sx", j.s2;
     }
     for(auto j : range1(N)){
-        ampo += -2.0*(h0-0.5*dh), "Sz", j;
+        ampo += -2.0*h0, "Sz", j;
     }
     auto H = toMPO(ampo);
 
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]){
     auto maxBondDim = maxLinkDim(psi0);
 
     printfln("\nh = %0.2f", h0);
-    println("h-dh/2 state");
+    println("h state");
     printfln("Energy = %0.3f, var = %0.3g, maxLinkDim = %d", en0, var, maxBondDim);
 
     dataFile << h0 << " " << en0 << " " << var << " " << maxBondDim << " ";
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]){
             ampo += -4.0, "Sx", j.s1, "Sx", j.s2;
         }
         for(auto j : range1(N)){
-            ampo += -2.0*(h-0.5*dh), "Sz", j;
+            ampo += -2.0*h, "Sz", j;
         }
         H = toMPO(ampo);
 
@@ -120,13 +120,13 @@ int main(int argc, char *argv[]){
         var = sqrt( abs( inner(H,psi0,H,psi0)-en0*en0) );
         maxBondDim = maxLinkDim(psi0);
 
-        println("h-dh/2 state");
+        println("h state");
         printfln("Energy = %0.3f, var = %0.3g, maxLinkDim = %d", en0, var, maxBondDim);
 
         dataFile << h << " " << en0 << " " << var << " " << maxBondDim << " ";
 
         //
-        // ground state of h+dh/2
+        // ground state of h+dh
         //
         for(auto j : range1(N)){
             ampo += -2.0*dh, "Sz", j;
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]){
         var = sqrt( abs( inner(H,psi1,H,psi1)-en1*en1) );
         maxBondDim = maxLinkDim(psi1);
 
-        println("h+dh/2 state");
+        println("h+dh state");
         printfln("Energy = %0.3f, var = %0.3g, maxLinkDim = %d", en1, var, maxBondDim);
 
         dataFile << en1 << " " << var << " " << maxBondDim << " ";
