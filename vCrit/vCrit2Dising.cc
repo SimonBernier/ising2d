@@ -1,3 +1,6 @@
+//
+// Copyright [2023] [Simon Bernier]
+//
 #include "itensor/all.h"
 #include "tdvp.h"
 
@@ -18,7 +21,7 @@ int main(int argc, char *argv[])
 
     auto Ly = input.getInt("Ly", 3);
 	auto Lx = input.getInt("Lx", 8);
-    auto h = input.getReal("h", 1.); // 1.6700 2.54617 2.7300 2.824674
+    auto h = input.getReal("h", 1.);
     auto truncErr = input.getReal("truncE", 1E-8);
     auto maxDim = input.getInt("maxDim", 512);
 	println();

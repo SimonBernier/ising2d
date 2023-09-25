@@ -1,8 +1,9 @@
+//
+// Copyright [2023] [Simon Bernier]
+//
 #include "itensor/all.h"
 
 using namespace itensor;
-
-//std::vector<MPO> makeEnergyMPO(int, int, double, MPS, SiteSet);
 
 //local energy calculation using swap gates
 std::vector<double> calculateLocalEnergy(int, int, SiteSet, MPS, std::vector<std::vector<ITensor>>,
