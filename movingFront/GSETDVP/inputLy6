@@ -3,7 +3,7 @@ input
         Ly = 6
         Lx = 48
         h = 5
-        hc = 2.880618
+        hc = 2.8765
         maxDim = 128
         truncE = 1E-8
         v = 3

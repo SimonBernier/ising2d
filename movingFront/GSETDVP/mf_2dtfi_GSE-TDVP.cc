@@ -128,7 +128,6 @@ int main(int argc, char *argv[]){
     //DMRG to find ground state at t=0
     auto [en0,psi0] = dmrg(H,initState,sweeps,{"Silent=",true});
     auto [en,psi] = dmrg(H,psi0,sweeps,{"Silent=",true});
-    auto psiTest = psi;
 
     // calculate von Neumann S
     auto svN = vonNeumannS(psi, N/2);
@@ -205,13 +204,13 @@ int main(int argc, char *argv[]){
 
         // time evolve with GSE-TDVP
         std::vector<Real> epsilonK = {0.1*truncE, 0.1*truncE};
-        addBasis(psiTest, H, epsilonK, {"Cutoff",truncE,
+        addBasis(psi, H, epsilonK, {"Cutoff",truncE,
                                         "Method", "DensityMatrix",
                                         "KrylovOrd",2,
                                         "Quiet",true});
-        tdvp(psiTest, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
-        tdvp(psiTest, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"Truncate",true,"NumCenter",1});
-        auto enTest = tdvp(psiTest, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
+        tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
+        tdvp(psi, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"Truncate",true,"NumCenter",1});
+        auto en = tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
 
 
         // change transverse fields
@@ -249,8 +248,6 @@ int main(int argc, char *argv[]){
         datafile << std::endl;
 
         printfln("t = %0.2f, en-en0 = %0.3g, SvN = %0.3f, maxDim = %d", tval, en-en0, svN, maxLinkDim(psi));
-
-        printfln("Compare at t=%0.1f:\n \t |en-enTest|/|en| = %0.10f%%, maxDim = %d, maxDimTest = %d", tval, abs(en-enTest)/abs(en)*100, maxLinkDim(psi), maxLinkDim(psiTest));
 
     }
 
