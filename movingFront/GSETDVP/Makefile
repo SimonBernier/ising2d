@@ -14,7 +14,7 @@ APP=mf_2dtfi_GSE-TDVP
 
 # 4. Add any headers your program depends on here. The make program
 #    will auto-detect if these headers have changed and recompile your app.
-HEADERS=$(TDVP_DIR)/tdvp.h
+HEADERS=$(TDVP_DIR)/tdvp.h, $(TDVP_DIR)/basisextension.h
 
 # 5. For any additional .cc (source) files making up your project,
 #    add their full filenames here.
