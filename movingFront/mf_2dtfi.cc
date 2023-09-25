@@ -3,6 +3,7 @@
 //
 #include "itensor/all.h"
 #include "tdvp.h"
+#include "basisextension.h"
 
 using namespace itensor;
 
@@ -125,8 +126,9 @@ int main(int argc, char *argv[]){
     }
 
     //DMRG to find ground state at t=0
-    auto [en,psi] = dmrg(H,initState,sweeps,{"Silent=",true});
     auto [en0,psi0] = dmrg(H,initState,sweeps,{"Silent=",true});
+    auto [en,psi] = dmrg(H,psi0,sweeps,{"Silent=",true});
+    auto psiTest = psi;
 
     // calculate von Neumann S
     auto svN = vonNeumannS(psi, N/2);
@@ -167,11 +169,11 @@ int main(int argc, char *argv[]){
     auto sweeps1 = Sweeps(2); //two forward time steps of delta1
     sweeps1.maxdim() = maxDim;
     sweeps1.cutoff() = truncE;
-    sweeps1.niter() = 15;
+    sweeps1.niter() = 20;
     auto sweeps2 = Sweeps(1); //one backward time step of delta2
     sweeps2.maxdim() = maxDim;
     sweeps2.cutoff() = truncE;
-    sweeps2.niter() = 15;
+    sweeps2.niter() = 20;
 
     printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, svN, maxLinkDim(psi));
 
@@ -201,11 +203,30 @@ int main(int argc, char *argv[]){
         // use psi as initial condition
         en0 = dmrg(psi0,H,sweeps,{"Silent=",true});
 
-	    // time evolve
+        // time evolve with GSE-TDVP
+        std::clock_t tStartGSETDVP = std::clock();
+        std::vector<Real> epsilonK = {0.1*truncE, 0.1*truncE};
+        addBasis(psiTest, H, epsilonK, {"Cutoff",truncE,
+                                        "Method", "DensityMatrix",
+                                        "KrylovOrd",2,
+                                        "Quiet",true});
+        printfln("\t\t --starting 1-site tdvp--");
+        tdvp(psiTest, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
+        tdvp(psiTest, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"Truncate",true,"NumCenter",1});
+        auto enTest = tdvp(psiTest, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
+        printfln("\t\t --end--");
+        printfln("\t\tTime taken: %.3fs\n", (double)(std::clock() - tStartGSETDVP)/CLOCKS_PER_SEC);
+        
+        std::clock_t tStart2TDVP = std::clock();
+        printfln("\t\t --starting 2-site tdvp--");
+	    // time evolve with two-site TDVP
         tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"NumCenter",2});
         tdvp(psi, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"NumCenter",2});
         en = tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"NumCenter",2});
+        printfln("\t\t --end--");
+        printfln("\t\tTime taken: %.3fs\n", (double)(std::clock() - tStart2TDVP)/CLOCKS_PER_SEC);
 
+/*
         // change transverse fields
         for(int i=1; i<=Lx; i++){
             for(int j=1; j<=Ly; j++){
@@ -239,8 +260,10 @@ int main(int argc, char *argv[]){
             datafile << sxsx[j] << " ";
         }
         datafile << std::endl;
+*/
+        //printfln("t = %0.2f, en-en0 = %0.3g, SvN = %0.3f, maxDim = %d", tval, en-en0, svN, maxLinkDim(psi));
 
-        printfln("t = %0.2f, en-en0 = %0.3g, SvN = %0.3f, maxDim = %d", tval, en-en0, svN, maxLinkDim(psi));
+        printfln("Compare at t=%0.1f:\n \t |en-enTest|/|en| = %0.10f%%, maxDim = %d, maxDimTest = %d", tval, abs(en-enTest)/abs(en)*100, maxLinkDim(psi), maxLinkDim(psiTest));
 
     }
 

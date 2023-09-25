@@ -1,0 +1,11 @@
+input  
+    {
+        Ly = 5
+        Lx = 40
+        h = 5
+        hc = 2.824674
+        maxDim = 128
+        truncE = 1E-8
+        v = 3
+	    tau = 0.2
+    }
