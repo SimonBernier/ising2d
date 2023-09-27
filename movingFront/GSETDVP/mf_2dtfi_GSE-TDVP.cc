@@ -174,11 +174,14 @@ int main(int argc, char *argv[]){
     sweeps2.cutoff() = truncE;
     sweeps2.niter() = 20;
 
+    auto GSETDVP = true;
+
     printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, svN, maxLinkDim(psi));
 
     ////////////////////////////////////////////////////////////////////////////
     ///////// time evolve //////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
+    printfln("\n --- Starting GSE-TDVP --- ");
     for(int n=1; n<=nt; n++){
 
         tval += dt; //update time vector
@@ -202,18 +205,33 @@ int main(int argc, char *argv[]){
         // use psi as initial condition
         en0 = dmrg(psi0,H,sweeps,{"Silent=",true});
 
-        // time evolve with GSE-TDVP
-        //std::vector<Real> epsilonK = {truncE, truncE};
-        std::vector<int> dimK = {maxLinkDim(psi), maxLinkDim(psi)};
-        //addBasis(psi, H, epsilonK, {"Cutoff",truncE,
-        addBasis(psi, H, dimK, {"Cutoff",truncE,
-                                        "Method", "DensityMatrix",
-                                        "KrylovOrd",2,
-                                        "Quiet",true});
-        tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
-        tdvp(psi, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"Truncate",true,"NumCenter",1});
-        auto en = tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
+        std::clock_t tStartTDVP = std::clock(); // check time for performance
+        
+        if(GSETDVP){
+            // time evolve with GSE-TDVP
+            std::vector<int> dimK = {maxLinkDim(psi), maxLinkDim(psi)};
+            addBasis(psi, H, dimK, {"Cutoff",truncE,
+                                            "Method", "DensityMatrix",
+                                            "KrylovOrd",3,
+                                            "Quiet",true});
+            // check if bond dimension has grown enough
+            if(maxLinkDim(psi)>=2*maxDim){
+                GSETDVP = false;
+                printfln("\n --- Starting 2-TDVP --- ");
+            }
+            // one-site TDVP
+            tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
+            tdvp(psi, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"Truncate",true,"NumCenter",1});
+            en = tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
+        }
+        else{
+            // two-site TDVP
+            tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",2});
+            tdvp(psi, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"Truncate",true,"NumCenter",2});
+            en = tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",2});
+        }
 
+        auto tdvpTime = (double)(std::clock() - tStartTDVP)/CLOCKS_PER_SEC;
 
         // change transverse fields
         for(int i=1; i<=Lx; i++){
@@ -249,7 +267,7 @@ int main(int argc, char *argv[]){
         }
         datafile << std::endl;
 
-        printfln("t = %0.2f, en-en0 = %0.3g, SvN = %0.3f, maxDim = %d", tval, en-en0, svN, maxLinkDim(psi));
+        printfln("t = %0.2f, en-en0 = %0.3g, SvN = %0.3f, maxDim = %d, wall time = %0.3fs", tval, en-en0, svN, maxLinkDim(psi), tdvpTime);
 
     }
 

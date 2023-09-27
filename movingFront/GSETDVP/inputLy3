@@ -4,8 +4,8 @@ input
         Lx = 24
         h = 5
         hc = 2.5400
-        maxDim = 128
+        maxDim = 32
         truncE = 1E-8
         v = 3
-	    tau = 0.2
+	    tau = 0.1
     }
