@@ -203,8 +203,10 @@ int main(int argc, char *argv[]){
         en0 = dmrg(psi0,H,sweeps,{"Silent=",true});
 
         // time evolve with GSE-TDVP
-        std::vector<Real> epsilonK = {truncE, truncE};
-        addBasis(psi, H, epsilonK, {"Cutoff",truncE,
+        //std::vector<Real> epsilonK = {truncE, truncE};
+        std::vector<int> dimK = {maxLinkDim(psi), maxLinkDim(psi)};
+        //addBasis(psi, H, epsilonK, {"Cutoff",truncE,
+        addBasis(psi, H, dimK, {"Cutoff",truncE,
                                         "Method", "DensityMatrix",
                                         "KrylovOrd",2,
                                         "Quiet",true});

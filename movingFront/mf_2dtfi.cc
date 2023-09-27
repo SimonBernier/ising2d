@@ -129,6 +129,7 @@ int main(int argc, char *argv[]){
     auto [en0,psi0] = dmrg(H,initState,sweeps,{"Silent=",true});
     auto [en,psi] = dmrg(H,psi0,sweeps,{"Silent=",true});
     auto psiTest = psi;
+    auto enTest = en;
 
     // calculate von Neumann S
     auto svN = vonNeumannS(psi, N/2);
@@ -176,16 +177,9 @@ int main(int argc, char *argv[]){
     sweeps2.niter() = 20;
 
     //GSE parameters
-    std::vector<Real> epsilonK = {truncE, truncE};
+    std::vector<Real> epsilonK = {truncE, 10.*truncE};
     // testing
-    std::vector<int> maxBondDims(N-1,0);
-    for(int i=1; i<N/2; i++){
-        auto temp = int(pow(2,i));
-        if(temp < 2)
-            temp = maxDim; // overloaded
-        maxBondDims[i-1] = temp < maxDim ? temp : maxDim;
-        printf("%d ", maxBondDims[i-1]);
-    }printfln("");
+    auto GSETDVP = true;
 
     printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, svN, maxLinkDim(psi));
 
@@ -215,31 +209,42 @@ int main(int argc, char *argv[]){
         // use psi as initial condition
         en0 = dmrg(psi0,H,sweeps,{"Silent=",true});
 
-        // time evolve with GSE-TDVP
-        std::clock_t tStartGSETDVP = std::clock();
-        std::vector<int> dimK = {maxLinkDim(psiTest), maxLinkDim(psiTest)};
-        addBasis(psiTest, H, dimK, {"Cutoff",truncE,
-                                        "Method", "DensityMatrix",
-                                        "KrylovOrd",3,
-                                        "Quiet",true});
-        auto links = linkInds(psiTest);
-        for(int b = 1; b<N; b++){
-            printf("% d", dim(links[b-1]));
-        }printfln("");
-        printfln("\t\t --starting 1-site tdvp--");
-        tdvp(psiTest, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
-        tdvp(psiTest, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"Truncate",true,"NumCenter",1});
-        auto enTest = tdvp(psiTest, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
-        links = linkInds(psiTest);
-        for(int b = 1; b<N; b++){
-            printf("% d", dim(links[b-1]));
-        }printfln("");
-        printfln("\t\t --end--");
-        printfln("\t\tTime taken: %.3fs\n", (double)(std::clock() - tStartGSETDVP)/CLOCKS_PER_SEC);
-        //CHECK
-        //for(int b = 1; b<N; b++){
-        //    Print(dim(links[b-1])==maxBondDims[b-1]);
-        //}printfln("");
+        if(GSETDVP){
+            // time evolve with GSE-TDVP
+            std::clock_t tStartGSETDVP = std::clock();
+            std::vector<int> dimK = {maxLinkDim(psiTest), maxLinkDim(psiTest)};
+            addBasis(psiTest, H, dimK, {"Cutoff",truncE,
+                                            "Method", "DensityMatrix",
+                                            "KrylovOrd",3,
+                                            "Quiet",true});
+            auto links = linkInds(psiTest);
+            for(int b = 1; b<N; b++){
+                printf("% d", dim(links[b-1]));
+            }printfln("");
+            if(maxLinkDim(psiTest)>2*maxDim)
+                GSETDVP = false;
+            printfln("\t\t --starting 1-site tdvp--");
+            tdvp(psiTest, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
+            tdvp(psiTest, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"Truncate",true,"NumCenter",1});
+            enTest = tdvp(psiTest, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
+            links = linkInds(psiTest);
+            for(int b = 1; b<N; b++){
+                printf("% d", dim(links[b-1]));
+            }printfln("");
+            printfln("\t\t --end--");
+            printfln("\t\tTime taken: %.3fs\n", (double)(std::clock() - tStartGSETDVP)/CLOCKS_PER_SEC);
+        }
+        else{
+            printfln("here we would switch to two-site TDVP");
+            std::clock_t tStart2TDVP = std::clock();
+            printfln("\t\t --starting 2-site tdvp--");
+            // time evolve with two-site TDVP
+            tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"NumCenter",2});
+            tdvp(psi, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"NumCenter",2});
+            enTest = tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"NumCenter",2});
+            printfln("\t\t --end--");
+            printfln("\t\tTime taken: %.3fs\n", (double)(std::clock() - tStart2TDVP)/CLOCKS_PER_SEC);
+        }
         
         std::clock_t tStart2TDVP = std::clock();
         printfln("\t\t --starting 2-site tdvp--");
