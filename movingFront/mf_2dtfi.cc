@@ -175,6 +175,18 @@ int main(int argc, char *argv[]){
     sweeps2.cutoff() = truncE;
     sweeps2.niter() = 20;
 
+    //GSE parameters
+    std::vector<Real> epsilonK = {truncE, truncE};
+    // testing
+    std::vector<int> maxBondDims(N-1,0);
+    for(int i=1; i<N/2; i++){
+        auto temp = int(pow(2,i));
+        if(temp < 2)
+            temp = maxDim; // overloaded
+        maxBondDims[i-1] = temp < maxDim ? temp : maxDim;
+        printf("%d ", maxBondDims[i-1]);
+    }printfln("");
+
     printfln("t = %0.2f, energy = %0.3f, SvN = %0.3f, maxDim = %d", tval, en, svN, maxLinkDim(psi));
 
     ////////////////////////////////////////////////////////////////////////////
@@ -205,17 +217,29 @@ int main(int argc, char *argv[]){
 
         // time evolve with GSE-TDVP
         std::clock_t tStartGSETDVP = std::clock();
-        std::vector<Real> epsilonK = {0.1*truncE, 0.1*truncE};
-        addBasis(psiTest, H, epsilonK, {"Cutoff",truncE,
+        std::vector<int> dimK = {maxLinkDim(psiTest), maxLinkDim(psiTest)};
+        addBasis(psiTest, H, dimK, {"Cutoff",truncE,
                                         "Method", "DensityMatrix",
-                                        "KrylovOrd",2,
+                                        "KrylovOrd",3,
                                         "Quiet",true});
+        auto links = linkInds(psiTest);
+        for(int b = 1; b<N; b++){
+            printf("% d", dim(links[b-1]));
+        }printfln("");
         printfln("\t\t --starting 1-site tdvp--");
         tdvp(psiTest, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
         tdvp(psiTest, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"Truncate",true,"NumCenter",1});
         auto enTest = tdvp(psiTest, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
+        links = linkInds(psiTest);
+        for(int b = 1; b<N; b++){
+            printf("% d", dim(links[b-1]));
+        }printfln("");
         printfln("\t\t --end--");
         printfln("\t\tTime taken: %.3fs\n", (double)(std::clock() - tStartGSETDVP)/CLOCKS_PER_SEC);
+        //CHECK
+        //for(int b = 1; b<N; b++){
+        //    Print(dim(links[b-1])==maxBondDims[b-1]);
+        //}printfln("");
         
         std::clock_t tStart2TDVP = std::clock();
         printfln("\t\t --starting 2-site tdvp--");
