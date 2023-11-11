@@ -1,7 +1,7 @@
 input  
     {
         Ly = 3
-        Lx = 24
+        Lx = 12
         h = 5
         hc = 2.5400
         maxDim = 32

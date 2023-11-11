@@ -4,6 +4,7 @@
 #include "itensor/all.h"
 #include "tdvp.h"
 #include "basisextension.h"
+#include <itensor/mps/mps.h>
 
 using namespace itensor;
 
@@ -56,8 +57,8 @@ int main(int argc, char *argv[]){
         exit(1);
     }
     //make header
-    datafile << "time" << " " << "en0(t)" << " " << "en-en0(t)" << " " << "svN" << " "
-             << "localEn0" << " " << "localEn-localEn0" << " " << "sxsx0" << " " << "sxsx" << std::endl;
+    datafile << "time" << " " << "en(t)" << " " << "enf(t)" << " " << "enf(t)-en0" << " " << "svN(t)" << " "
+             << "localEn(t)" << " " << "localEn(t)-localEn0" << " " << "sxsx" << std::endl;
 
     auto N = Ly * Lx;
     auto sites = SpinHalf(N,{"ConserveQNs=",false,"ConserveParity",true});
@@ -69,12 +70,20 @@ int main(int argc, char *argv[]){
     for(auto j : lattice){
         ampo += -4.0, "Sx", j.s1, "Sx", j.s2;
     }
+    for(int i=1; i<=Lx; i++){
+        for(int j=1; j<=Ly; j++){
+            int b = Ly*(i-1) + j;
+            ampo += -2.0*hc, "Sz", b;
+        }
+    }
+    auto Hfinal = toMPO(ampo);
+
     // H at t=0 (gapped ground state)
     auto hvals = hvector(Lx, Ly, 0.0, h, v, tau, tanhshift);
     for(int i=1; i<=Lx; i++){
         for(int j=1; j<=Ly; j++){
             int b = Ly*(i-1) + j;
-            ampo += -2.0*hc*(1.0 + hvals[b-1]), "Sz", b;
+            ampo += -2.0*hc*hvals[b-1], "Sz", b;
         }
     }
     auto H = toMPO(ampo);
@@ -92,8 +101,7 @@ int main(int argc, char *argv[]){
     sweeps.cutoff() = truncE;
 
     // calculate initial local energy density
-    std::vector<double> localEn0(Ly*(Lx-1),0.0), localEn(Ly*(Lx-1),0.0); // local energy density vector
-    std::vector<double> sxsx0(N,0.0), sxsx(N,0.0);
+    std::vector<double> localEn0(Lx-1,0.0), localEn(Lx-1,0.0); // local energy density vector
 
     //make 2D vector of ITensor for local energy operators
     //long-range interactions have the same structure as nearest-neighbour when we use swap gates
@@ -112,7 +120,7 @@ int main(int argc, char *argv[]){
                 }
             }
             // on-site operators
-            LED_OnSite[i-1][j-1] = -2.0*hc*(1.0+hvals[index])*sites.op("Sz",index);
+            LED_OnSite[i-1][j-1] = -2.0*hc*sites.op("Sz",index);
             //y-periodic boundary equations
             if(j==Ly){
                 // site index-Ly+1 is moved to site index-1 with swap gates
@@ -126,30 +134,36 @@ int main(int argc, char *argv[]){
     }
 
     //DMRG to find ground state at t=0
-    auto [en0,psi0] = dmrg(H,initState,sweeps,{"Silent=",true});
-    auto [en,psi] = dmrg(H,psi0,sweeps,{"Silent=",true});
+    //DMRG to find critical ground state
+    auto [en0,psi] = dmrg(Hfinal,initState,sweeps,{"Silent=",true});
+    auto dim0 = maxLinkDim(psi); //defines max dimension of critical state
+    localEn0 = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LED_OnSite, LEDyPBC, LED_LR);
+
+    //DMRG to find ground state at t=0
+    auto en = dmrg(psi,H,sweeps,{"Silent=",true}); // doing this saves on memory
+    auto enf = inner(psi, Hfinal, psi);
 
     // calculate von Neumann S
     auto svN = vonNeumannS(psi, N/2);
     // calculate local energy density
     localEn = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LED_OnSite, LEDyPBC, LED_LR);
-    for(int b = 1; b<=N; b++){
-        sxsx[b-1] = spinspin(N/2+1, b, psi, sites);
+
+    // calculate the correlation matrix Sx_i Sx_j
+    std::vector<double> cxx(Lx,0.);
+    for(int b = 1; b<=Lx; b++){
+        cxx[b-1] = spinspin( (Lx-1)/2*Ly+1, (b-1)*Ly + 1, psi, sites);
     }
 
     // store data to file
-    datafile << 0.0 << " " << en << " " << 0.0 << " " << svN << " ";
-    for (int j=0; j < N-1; j++){
+    datafile << 0.0 << " " << en << " " << enf << " " << enf-en0 << " " << svN << " ";
+    for (int j=0; j < Lx-1; j++){
         datafile << localEn[j] << " ";
     }
-    for (int j=0; j < N-1; j++){
-        datafile << 0.0 << " ";
+    for (int j=0; j < Lx-1; j++){
+        datafile << localEn[j]-localEn0[j] << " ";
     }
-    for (int j = 0; j < N; j++){
-        datafile << sxsx[j] << " ";
-    }
-    for (int j = 0; j < N; j++){
-        datafile << sxsx[j] << " ";
+    for (int j = 0; j < Lx; j++){
+        datafile << cxx[j] << " ";
     }
     datafile << std::endl;
 
@@ -160,10 +174,6 @@ int main(int argc, char *argv[]){
     double finalTime = 0.25*double(Lx) + 0.5*double(Lx)/v + 2.0*tau*tanhshift; // 0.5*N/2 + 0.5*N/v + 2*tau*shift
     int nt = int(finalTime/dt);
 
-    // instantaneous GS search parameters
-    sweeps = Sweeps(10); //number of sweeps is 5
-    sweeps.maxdim() = maxDim; //gradually increase states kept
-    sweeps.cutoff() = truncE; //desired truncation error
     // 4th order TDVP parameters
     auto sweeps1 = Sweeps(2); //two forward time steps of delta1
     sweeps1.maxdim() = maxDim;
@@ -182,7 +192,8 @@ int main(int argc, char *argv[]){
     ///////// time evolve //////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     printfln("\n --- Starting GSE-TDVP --- ");
-    for(int n=1; n<=nt; n++){
+    auto stopCondition = false;
+    for(int n=1; n<=nt && !stopCondition; n++){
 
         tval += dt; //update time vector
 
@@ -201,30 +212,30 @@ int main(int argc, char *argv[]){
         }
         H = toMPO(ampo);
 
-	    // calculate instantaneous ground state
-        // use psi as initial condition
-        en0 = dmrg(psi0,H,sweeps,{"Silent=",true});
-
         std::clock_t tStartTDVP = std::clock(); // check time for performance
         
-        if(GSETDVP){
-            // time evolve with GSE-TDVP
-            std::vector<int> dimK = {maxLinkDim(psi), maxLinkDim(psi)};
-            addBasis(psi, H, dimK, {"Cutoff",truncE,
+        if(GSETDVP){ // time evolve with GSE-TDVP
+            std::vector<Real> truncK = {0.1*truncE, 0.1*truncE};
+            addBasis(psi, H, truncK, {"Cutoff",truncE,
                                             "Method", "DensityMatrix",
                                             "KrylovOrd",3,
                                             "Quiet",true});
-            // check if bond dimension has grown enough
-            if(maxLinkDim(psi)>=2*maxDim){
+            // check if bond dimension has grown past the maximum dimension
+            if(maxLinkDim(psi)>=maxDim){
                 GSETDVP = false;
-                printfln("\n --- Starting 2-TDVP --- ");
+                printfln("\n --- Starting 2-TDVP at t = %0.1f --- ", tval+dt);
             }
             // one-site TDVP
             tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
             tdvp(psi, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"Truncate",true,"NumCenter",1});
             en = tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",1});
+            if(maxLinkDim(psi)>dim0){ // check if bond dimension of psi is the same as the critical state
+                GSETDVP = false;
+                printfln("\n --- Starting 2-TDVP at t = %0.2f --- ", tval+dt);
+            }
         }
         else{
+            if(n==1) printfln("\n --- Starting 2-TDVP --- ");
             // two-site TDVP
             tdvp(psi, H, -Cplx_i*delta1, sweeps1, {"Silent",true,"Truncate",true,"NumCenter",2});
             tdvp(psi, H, -Cplx_i*delta2, sweeps2, {"Silent",true,"Truncate",true,"NumCenter",2});
@@ -233,42 +244,35 @@ int main(int argc, char *argv[]){
 
         auto tdvpTime = (double)(std::clock() - tStartTDVP)/CLOCKS_PER_SEC;
 
-        // change transverse fields
-        for(int i=1; i<=Lx; i++){
-            for(int j=1; j<=Ly; j++){
-                int index = (i-1)*Ly+j;
-                // on-site operators
-                LED_OnSite[i-1][j-1] = -2.0*hc*(1.0+hvals[index])*sites.op("Sz",index);
-            }
-        }
+        // calculate energy wrt critical Hamiltonian 
+        enf = innerC(psi, Hfinal, psi).real();
 
         //calculate entanglement entropy
         svN = vonNeumannS(psi, N/2);
         // calculate local energy density <psi(t)|H(x,y)|psi(t)>
-        localEn0 = calculateLocalEnergy(Lx, Ly, sites, psi0, LED, LED_OnSite, LEDyPBC, LED_LR);
         localEn = calculateLocalEnergy(Lx, Ly, sites, psi, LED, LED_OnSite, LEDyPBC, LED_LR);
-        for(int b = 1; b<=N; b++){
-	        sxsx0[b-1] = spinspin(N/2+1, b, psi0, sites);
-            sxsx[b-1] = spinspin(N/2+1, b, psi, sites);
+        for(int b = 1; b<=Lx; b++){
+            cxx[b-1] = spinspin( (Lx-1)/2*Ly+1, (b-1)*Ly + 1, psi, sites);
         }
 
-        datafile << tval << " " << en0 << " " << en-en0 << " " << svN << " ";
-        for (int j = 0; j < N-1; j++){
-            datafile << localEn0[j] << " ";
+        datafile << tval << " " << en << " " << enf << " " << enf-en0 << " " << svN << " ";
+        for (int j = 0; j < Lx-1; j++){
+            datafile << localEn[j] << " ";
         }
-        for (int j = 0; j < N-1; j++){
+        for (int j = 0; j < Lx-1; j++){
             datafile << localEn[j]-localEn0[j] << " ";
         }
-        for (int j = 0; j < N; j++){
-            datafile << sxsx0[j] << " ";
-        }
-        for (int j = 0; j < N; j++){
-            datafile << sxsx[j] << " ";
+        for (int j = 0; j < Lx; j++){
+            datafile << cxx[j] << " ";
         }
         datafile << std::endl;
 
-        printfln("t = %0.2f, en-en0 = %0.3g, SvN = %0.3f, maxDim = %d, wall time = %0.3fs", tval, en-en0, svN, maxLinkDim(psi), tdvpTime);
+        printfln("t = %0.2f, en-en0 = %0.3g, SvN = %0.3f, maxDim = %d, wall time = %0.3fs", tval, enf-en0, svN, maxLinkDim(psi), tdvpTime);
 
+        if( abs(en - enf) < 1E-6){
+            stopCondition = true;
+            printfln("stop condition met, |en-enf| = %0.10f", abs(en-enf));
+        }
     }
 
     datafile.close();
@@ -307,9 +311,9 @@ std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
                                 std::vector<ITensor> LEDyPBC,
                                 std::vector<std::vector<ITensor>> LED_LR){
 
-    std::vector<std::vector<double>> tempEn(Lx, std::vector<double>(Ly, 0.0));
+    std::vector<double> tempEn(Lx, 0.0);
 
-    std::vector<double> localEnergy(Ly*(Lx-1), 0.0); // interpolated energy density
+    std::vector<double> localEnergy(Lx-1, 0.0); // interpolated energy density
 
     // MPS nearest-neighbour interaction
     for(int i=1; i<=Lx; i++){
@@ -318,7 +322,7 @@ std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
             int index = (i-1)*Ly + j;
             psi.position(index);
             auto ket = psi(index)*psi(index+1);
-            tempEn[i-1][j-1] = eltC(dag(prime(ket,"Site")) * LED[i-1][j-1] * ket).real();
+            tempEn[i-1] += eltC(dag(prime(ket,"Site")) * LED[i-1][j-1] * ket).real();
 
         }// for j
     }// for i
@@ -326,7 +330,7 @@ std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
     // y-periodic interactions
     for(int i=1; i<=Lx; i++){
 
-        tempEn[i-1][Ly-1] = calculatePBCenergy(i, Ly, psi, LEDyPBC[i-1], sites);
+        tempEn[i-1] += calculatePBCenergy(i, Ly, psi, LEDyPBC[i-1], sites);
 
     }// for i
 
@@ -338,7 +342,7 @@ std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
 
         for(int m = 0; m<Ly; m++){ // long-range
 
-            localEnergy[index-1+m] = lrEnergy[m];
+            localEnergy[i-1] += lrEnergy[m];
 
         }// for m
     }// for i
@@ -351,52 +355,35 @@ std::vector<double> calculateLocalEnergy(int Lx, int Ly, SiteSet sites, MPS psi,
 
             psi.position(index);
             if(i == 1){
-                localEnergy[index-1] += eltC(dag(prime(psi(index),"Site")) * LED_OnSite[i-1][j-1] * psi(index)).real();
+                localEnergy[i-1] += eltC(dag(prime(psi(index),"Site")) * LED_OnSite[i-1][j-1] * psi(index)).real();
             }
             else{
-                localEnergy[index-1] += 0.5*eltC(dag(prime(psi(index),"Site")) * LED_OnSite[i-1][j-1] * psi(index)).real();
+                localEnergy[i-1] += 0.5*eltC(dag(prime(psi(index),"Site")) * LED_OnSite[i-1][j-1] * psi(index)).real();
             }
             
             psi.position(index+Ly);
             if(i==Lx-1){
-                localEnergy[index-1] += eltC(dag(prime(psi(index+Ly),"Site")) * LED_OnSite[i][j-1] * psi(index+Ly)).real();
+                localEnergy[i-1] += eltC(dag(prime(psi(index+Ly),"Site")) * LED_OnSite[i][j-1] * psi(index+Ly)).real();
             }
             else{
-                localEnergy[index-1] += 0.5*eltC(dag(prime(psi(index+Ly),"Site")) * LED_OnSite[i][j-1] * psi(index+Ly)).real();
+                localEnergy[i-1] += 0.5*eltC(dag(prime(psi(index+Ly),"Site")) * LED_OnSite[i][j-1] * psi(index+Ly)).real();
             }
         }// for j
     }// for i
 
     // interpolate tempEn into localEnergy
     for(int i=1; i<Lx; i++){
-        for(int j=1; j<=Ly; j++){ 
 
-            int index = (i-1)*Ly + j;
-
-            if(j == 1){ // interpolate with periodic boundary conditions
-                localEnergy[index-1] += 0.25 * ( tempEn[i-1][j-1] + tempEn[i][j-1] + tempEn[i-1][j+Ly-2] + tempEn[i][j+Ly-2] );
-            }
-            else{ // interpolate normally
-                localEnergy[index-1] += 0.25 * ( tempEn[i-1][j-2] + tempEn[i][j-2] + tempEn[i-1][j-1] + tempEn[i][j-1] );
-            }
-            // add left/right boundary terms
-            if( i==1 ){
-                if( j== 1){
-                    localEnergy[index-1] += 0.25 * ( tempEn[i-1][j+Ly-2] + tempEn[i-1][j-1]);
-                }
-                else{
-                    localEnergy[index-1] += 0.25 * ( tempEn[i-1][j-2] + tempEn[i-1][j-1]);
-                }
-            }// if i=1
-            else if( i==Lx-1 ){
-                if( j== 1){
-                    localEnergy[index-1] += 0.25 * ( tempEn[i][j+Ly-2] + tempEn[i][j-1]);
-                }
-                else{
-                    localEnergy[index-1] += 0.25 * ( tempEn[i][j-2] + tempEn[i][j-1]);
-                }
-            } // if i=Lx-1
-        } // for j
+        // interpolation and average of the nearest-neighbour interactions
+        if( i==1 ){ // left boundary
+            localEnergy[i-1] += tempEn[i-1] + 0.5*tempEn[i];
+        }
+        else if( i==Lx-1 ){ // right boundary
+            localEnergy[i-1] += 0.5 * tempEn[i-1] + tempEn[i];
+        }
+        else{
+            localEnergy[i-1] += 0.5 * (tempEn[i-1] + tempEn[i]);
+        }
     } // for i
 
     return localEnergy;
