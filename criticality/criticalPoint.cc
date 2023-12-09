@@ -32,11 +32,11 @@ int main(int argc, char *argv[]){
     if(argc > 1)
         Ly = std::stoi(argv[1]);
 
-    printfln("Ly = %d, Lx = %d, h = %0.2f", Ly, Lx, h);
+    printfln("Ly = %d, Lx = %d, h = %0.4f", Ly, Lx, h);
 
     // write results to file
     char schar[64];
-    int n1 = std::sprintf(schar,"Ly_%d_Lx_%d_h_%0.2f_tfi2Dcrit.dat",Ly,Lx,h); 
+    int n1 = std::sprintf(schar,"Ly_%d_Lx_%d_h_%0.4f_tfi2Dcrit.dat",Ly,Lx,h); 
     std::string s1(schar);
     std::ofstream dataFile;
     dataFile.open(s1); // opens the file
