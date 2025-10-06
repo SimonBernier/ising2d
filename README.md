@@ -128,6 +128,18 @@ This project was developed as part of graduate research in computational quantum
 
 ---
 
+## 📄 Publication
+
+This work contributed to the following publication:
+
+**[Spatiotemporal quenches for efficient critical ground state preparation in the two-dimensional transverse field Ising model](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.111.054311)**  
+Simon Bernier and Kartiek Agarwal  
+*Physical Review B* **111**, 054311 (2025)
+
+**Abstract:** This paper explores spatiotemporal quench protocols for efficiently preparing critical ground states in 2D quantum systems, with applications to quantum simulation and computation.
+
+---
+
 ## 📚 Related Physics Concepts
 
 - **Quantum Phase Transitions:** The 2D-TFI model exhibits a quantum phase transition between ordered and disordered phases
@@ -177,7 +189,22 @@ Potential extensions:
 
 ## 📝 Citation
 
-If you use this code in your research, please cite appropriately and feel free to reach out with questions or collaboration ideas.
+If you use this code or find this work useful, please cite:
+
+```bibtex
+@article{bernier2025spatiotemporal,
+  title={Spatiotemporal quenches for efficient critical ground state preparation in the two-dimensional transverse field Ising model},
+  author={Bernier, Simon and Agarwal, Kartiek},
+  journal={Physical Review B},
+  volume={111},
+  pages={054311},
+  year={2025},
+  publisher={American Physical Society},
+  doi={10.1103/PhysRevB.111.054311}
+}
+```
+
+For questions or collaboration ideas, feel free to reach out!
 
 ---
 
