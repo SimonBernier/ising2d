@@ -136,8 +136,6 @@ This work contributed to the following publication:
 Simon Bernier and Kartiek Agarwal  
 *Physical Review B* **111**, 054311 (2025)
 
-**Abstract:** This paper explores spatiotemporal quench protocols for efficiently preparing critical ground states in 2D quantum systems, with applications to quantum simulation and computation.
-
 ---
 
 ## 📚 Related Physics Concepts
