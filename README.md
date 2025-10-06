@@ -135,6 +135,7 @@ This work contributed to the following publication:
 **[Spatiotemporal quenches for efficient critical ground state preparation in the two-dimensional transverse field Ising model](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.111.054311)**  
 Simon Bernier and Kartiek Agarwal  
 *Physical Review B* **111**, 054311 (2025)
+[arXiv:2404.02957](https://arxiv.org/abs/2404.02957)
 
 ---
 
